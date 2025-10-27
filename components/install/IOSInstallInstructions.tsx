@@ -13,7 +13,8 @@ export function IOSInstallInstructions({ isOpen, onClose }: IOSInstallInstructio
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(0);
+      // Use queueMicrotask to avoid synchronous setState in effect
+      queueMicrotask(() => setCurrentStep(0));
     }
   }, [isOpen]);
 
@@ -87,8 +88,8 @@ export function IOSInstallInstructions({ isOpen, onClose }: IOSInstallInstructio
                 index === currentStep
                   ? 'bg-blue-600'
                   : index < currentStep
-                  ? 'bg-blue-400'
-                  : 'bg-slate-200 dark:bg-slate-700'
+                    ? 'bg-blue-400'
+                    : 'bg-slate-200 dark:bg-slate-700'
               }`}
             />
           ))}
@@ -107,9 +108,7 @@ export function IOSInstallInstructions({ isOpen, onClose }: IOSInstallInstructio
             </div>
 
             {/* Step title */}
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-              {Step.title}
-            </h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{Step.title}</h3>
 
             {/* Step description */}
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
@@ -148,9 +147,7 @@ export function IOSInstallInstructions({ isOpen, onClose }: IOSInstallInstructio
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
                       Añadir a Inicio
                     </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Opción en el menú
-                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Opción en el menú</p>
                   </div>
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">

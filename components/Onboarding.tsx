@@ -4,7 +4,14 @@
 // Tutorial inicial para nuevos usuarios (se muestra solo una vez)
 
 import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, BookOpen, Calendar, MessageCircle, Sparkles } from 'lucide-react';
+import {
+  ChevronRight,
+  ChevronLeft,
+  BookOpen,
+  Calendar,
+  MessageCircle,
+  Sparkles,
+} from 'lucide-react';
 import { haptics } from '@/lib/haptics';
 
 const ONBOARDING_KEY = 'parroquia-onboarding-completed';
@@ -44,7 +51,8 @@ export function Onboarding() {
     // Check if onboarding has been completed
     const completed = localStorage.getItem(ONBOARDING_KEY);
     if (!completed) {
-      setIsOpen(true);
+      // Use queueMicrotask to avoid synchronous setState in effect
+      queueMicrotask(() => setIsOpen(true));
     }
   }, []);
 
@@ -100,13 +108,13 @@ export function Onboarding() {
 
         {/* Content */}
         <div className="px-8 py-6 text-center min-h-[400px] flex flex-col items-center justify-center">
-          <div className={`w-24 h-24 bg-gradient-to-br ${slide.gradient} rounded-[28px] flex items-center justify-center mb-8 shadow-lg`}>
+          <div
+            className={`w-24 h-24 bg-gradient-to-br ${slide.gradient} rounded-[28px] flex items-center justify-center mb-8 shadow-lg`}
+          >
             <Icon className="w-12 h-12 text-white" strokeWidth={2} />
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-            {slide.title}
-          </h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">{slide.title}</h2>
 
           <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
             {slide.description}

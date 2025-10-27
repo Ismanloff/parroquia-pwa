@@ -1,14 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sun, Moon, Smartphone, Settings as SettingsIcon, Bell, BellOff, Calendar, BookOpen, Sparkles } from 'lucide-react';
+import {
+  Sun,
+  Moon,
+  Smartphone,
+  Settings as SettingsIcon,
+  Bell,
+  BellOff,
+  Calendar,
+  BookOpen,
+  Sparkles,
+} from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { InstallButton } from '@/components/install';
 
 export function Settings() {
   const { themeMode, setThemeMode } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>('default');
 
   // Configuraciones de notificaciones específicas
   const [eventNotifications, setEventNotifications] = useState(true);
@@ -16,20 +27,23 @@ export function Settings() {
   const [saintNotifications, setSaintNotifications] = useState(true);
 
   useEffect(() => {
-    // Verificar permisos actuales
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-      setNotificationsEnabled(Notification.permission === 'granted');
-    }
+    // Use queueMicrotask to avoid synchronous setState in effect
+    queueMicrotask(() => {
+      // Verificar permisos actuales
+      if ('Notification' in window) {
+        setNotificationPermission(Notification.permission);
+        setNotificationsEnabled(Notification.permission === 'granted');
+      }
 
-    // Cargar preferencias desde localStorage
-    const savedEventNotifs = localStorage.getItem('notifications_events');
-    const savedGospelNotifs = localStorage.getItem('notifications_gospel');
-    const savedSaintNotifs = localStorage.getItem('notifications_saints');
+      // Cargar preferencias desde localStorage
+      const savedEventNotifs = localStorage.getItem('notifications_events');
+      const savedGospelNotifs = localStorage.getItem('notifications_gospel');
+      const savedSaintNotifs = localStorage.getItem('notifications_saints');
 
-    if (savedEventNotifs !== null) setEventNotifications(savedEventNotifs === 'true');
-    if (savedGospelNotifs !== null) setDailyGospelNotifications(savedGospelNotifs === 'true');
-    if (savedSaintNotifs !== null) setSaintNotifications(savedSaintNotifs === 'true');
+      if (savedEventNotifs !== null) setEventNotifications(savedEventNotifs === 'true');
+      if (savedGospelNotifs !== null) setDailyGospelNotifications(savedGospelNotifs === 'true');
+      if (savedSaintNotifs !== null) setSaintNotifications(savedSaintNotifs === 'true');
+    });
   }, []);
 
   const handleRequestNotifications = async () => {
@@ -81,7 +95,10 @@ export function Settings() {
         }}
       >
         {/* Efecto Liquid Glass sutil en el fondo */}
-        <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl" style={{ backdropFilter: 'blur(20px) saturate(180%)' }} />
+        <div
+          className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl"
+          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+        />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
@@ -101,7 +118,10 @@ export function Settings() {
       {/* Contenido */}
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-28">
         {/* Selector de Tema */}
-        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+        <div
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6"
+          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+        >
           <h2 className="text-[17px] font-bold text-slate-900 dark:text-white mb-1 tracking-tight">
             Apariencia
           </h2>
@@ -162,7 +182,10 @@ export function Settings() {
         </div>
 
         {/* Notificaciones */}
-        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+        <div
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6"
+          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+        >
           <div className="flex items-center gap-3 mb-1">
             <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-md">
               {notificationsEnabled ? (
@@ -183,7 +206,8 @@ export function Settings() {
           {notificationPermission === 'denied' && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
               <p className="text-sm text-red-700 dark:text-red-300">
-                Las notificaciones están bloqueadas. Por favor, habilítalas en la configuración de tu navegador.
+                Las notificaciones están bloqueadas. Por favor, habilítalas en la configuración de
+                tu navegador.
               </p>
             </div>
           )}
@@ -218,9 +242,7 @@ export function Settings() {
                 <button
                   onClick={() => handleToggleNotification('events', !eventNotifications)}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
-                    eventNotifications
-                      ? 'bg-blue-600'
-                      : 'bg-slate-300 dark:bg-slate-600'
+                    eventNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
                   <div
@@ -249,9 +271,7 @@ export function Settings() {
                 <button
                   onClick={() => handleToggleNotification('gospel', !dailyGospelNotifications)}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
-                    dailyGospelNotifications
-                      ? 'bg-blue-600'
-                      : 'bg-slate-300 dark:bg-slate-600'
+                    dailyGospelNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
                   <div
@@ -280,9 +300,7 @@ export function Settings() {
                 <button
                   onClick={() => handleToggleNotification('saints', !saintNotifications)}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
-                    saintNotifications
-                      ? 'bg-blue-600'
-                      : 'bg-slate-300 dark:bg-slate-600'
+                    saintNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
                   <div
@@ -297,18 +315,29 @@ export function Settings() {
         </div>
 
         {/* Información de la app */}
-        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+        <div
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30"
+          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+        >
           <h2 className="text-[17px] font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
             Acerca de
           </h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-slate-50/50 dark:bg-slate-700/30 rounded-xl">
-              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium tracking-tight">Versión</span>
-              <span className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">1.0.0</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium tracking-tight">
+                Versión
+              </span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
+                1.0.0
+              </span>
             </div>
             <div className="flex justify-between items-center p-3 bg-slate-50/50 dark:bg-slate-700/30 rounded-xl">
-              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium tracking-tight">Plataforma</span>
-              <span className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">Web PWA</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium tracking-tight">
+                Plataforma
+              </span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
+                Web PWA
+              </span>
             </div>
           </div>
         </div>

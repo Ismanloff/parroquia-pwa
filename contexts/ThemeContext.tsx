@@ -43,8 +43,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Cargar y aplicar tema inicial
   useEffect(() => {
     const savedTheme = (localStorage.getItem('theme-mode') as ThemeMode) || 'system';
-    setThemeModeState(savedTheme);
-    applyTheme(savedTheme);
+    // Use queueMicrotask to avoid synchronous setState in effect
+    queueMicrotask(() => {
+      setThemeModeState(savedTheme);
+      applyTheme(savedTheme);
+    });
   }, []);
 
   // Detectar cambios en preferencia del sistema

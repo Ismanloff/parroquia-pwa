@@ -5,12 +5,12 @@
  */
 
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export async function GET() {
   try {
     // Leer el archivo pineconeTool para ver qué threshold tiene
-    const fs = require('fs');
-    const path = require('path');
 
     const toolPath = path.join(process.cwd(), 'app/api/chat/tools/pineconeTool.ts');
     const toolContent = fs.readFileSync(toolPath, 'utf8');
@@ -39,16 +39,19 @@ export async function GET() {
         vercelEnv: process.env.VERCEL_ENV || 'development',
         gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'N/A',
       },
-      message: threshold === '0.35'
-        ? '✅ Threshold correcto - debería funcionar'
-        : '❌ Threshold incorrecto - código viejo desplegado'
+      message:
+        threshold === '0.35'
+          ? '✅ Threshold correcto - debería funcionar'
+          : '❌ Threshold incorrecto - código viejo desplegado',
     });
-
   } catch (error: any) {
-    return NextResponse.json({
-      status: 'ERROR',
-      error: error.message,
-      stack: error.stack
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        status: 'ERROR',
+        error: error.message,
+        stack: error.stack,
+      },
+      { status: 500 }
+    );
   }
 }

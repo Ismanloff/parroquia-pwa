@@ -59,22 +59,25 @@ export function useInstallPrompt(): InstallPromptState {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const dismissed = localStorage.getItem(DISMISSED_KEY);
-    const timestamp = localStorage.getItem(DISMISSED_TIMESTAMP_KEY);
+    // Use queueMicrotask to avoid synchronous setState in effect
+    queueMicrotask(() => {
+      const dismissed = localStorage.getItem(DISMISSED_KEY);
+      const timestamp = localStorage.getItem(DISMISSED_TIMESTAMP_KEY);
 
-    if (dismissed === 'true' && timestamp) {
-      const dismissedTime = parseInt(timestamp, 10);
-      const now = Date.now();
+      if (dismissed === 'true' && timestamp) {
+        const dismissedTime = parseInt(timestamp, 10);
+        const now = Date.now();
 
-      // Si han pasado más de 7 días, resetear
-      if (now - dismissedTime > DISMISSAL_DURATION) {
-        localStorage.removeItem(DISMISSED_KEY);
-        localStorage.removeItem(DISMISSED_TIMESTAMP_KEY);
-        setIsPromptDismissed(false);
-      } else {
-        setIsPromptDismissed(true);
+        // Si han pasado más de 7 días, resetear
+        if (now - dismissedTime > DISMISSAL_DURATION) {
+          localStorage.removeItem(DISMISSED_KEY);
+          localStorage.removeItem(DISMISSED_TIMESTAMP_KEY);
+          setIsPromptDismissed(false);
+        } else {
+          setIsPromptDismissed(true);
+        }
       }
-    }
+    });
   }, []);
 
   // Capturar el evento beforeinstallprompt (solo Chrome/Edge/Android)
