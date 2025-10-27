@@ -1,0 +1,74 @@
+{
+  "comunidad_eloos": {
+    "title": "Formulario de Inscripción - Comunidad Eloos",
+    "description": "Formulario para unirse a la comunidad Eloos (Entrega y Superación)",
+    "url": "https://form.typeform.com/to/eA98edUa",
+    "type": "url",
+    "keywords": [
+      "comunidad",
+      "eloos",
+      "entrega",
+      "superacion",
+      "superación",
+      "unirse",
+      "apuntarse",
+      "inscripcion",
+      "inscripción",
+      "formulario",
+      "joven",
+      "jóvenes",
+      "grupo"
+    ]
+  },
+  "catequesis_infantil": {
+    "title": "Formulario de Inscripción - Catequesis Infantil",
+    "description": "Formulario para inscribir niños en catequesis (PENDIENTE: Añadir PDF cuando esté disponible)",
+    "url": "/docs/catequesis-infantil-inscripcion.pdf",
+    "type": "pdf",
+    "keywords": [
+      "catequesis",
+      "infantil",
+      "niños",
+      "niños",
+      "inscripcion",
+      "inscripción",
+      "apuntar",
+      "primera comunion",
+      "primera comunión"
+    ]
+  },
+  "autorizacion_salida": {
+    "title": "Autorización para Salidas y Excursiones",
+    "description": "Documento de autorización parental para actividades fuera de la parroquia (PENDIENTE: Añadir PDF cuando esté disponible)",
+    "url": "/docs/autorizacion-salida-parroquial.pdf",
+    "type": "pdf",
+    "keywords": [
+      "autorizacion",
+      "autorización",
+      "salida",
+      "excursion",
+      "excursión",
+      "montaña",
+      "viaje",
+      "actividad",
+      "permiso",
+      "parental"
+    ]
+  },
+  "contacto_parroco": {
+    "title": "Información de Contacto del Párroco",
+    "description": "Datos de contacto para consultas personales con el párroco",
+    "url": "/contacto",
+    "type": "url",
+    "keywords": [
+      "contacto",
+      "parroco",
+      "párroco",
+      "sacerdote",
+      "padre",
+      "consulta",
+      "cita",
+      "hablar"
+    ]
+  }
+}
