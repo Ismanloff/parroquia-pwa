@@ -23,36 +23,26 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overscroll-behavior-y: none; /* ✅ Previene bounce scroll en iOS */
+  -webkit-overflow-scrolling: touch; /* ✅ Smooth scrolling */
 }
 
-/* ✅ iOS: Prevenir bounce scroll que muestra barras de Safari */
-html,
-body {
-  overscroll-behavior: none; /* Previene bounce en iOS */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling en iOS */
-  position: fixed; /* Previene scroll del body */
-  width: 100%;
-  height: 100%;
-  overflow: hidden; /* Sin scroll en body */
+/* ✅ iOS: Prevenir bounce scroll y optimizar altura */
+html {
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
 }
 
-#main-content {
-  overflow-y: auto; /* Solo el contenido scrollea */
-  height: 100vh;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain; /* Contener scroll dentro del elemento */
-}
-
-/* ✅ iOS: Ocultar barra de direcciones en scroll */
+/* ✅ iOS: Altura completa en dispositivos móviles */
 @supports (-webkit-touch-callout: none) {
   /* Solo en iOS */
+  html {
+    height: -webkit-fill-available;
+  }
+
   body {
     min-height: 100vh;
     min-height: -webkit-fill-available;
-  }
-
-  html {
-    height: -webkit-fill-available;
   }
 }
 
