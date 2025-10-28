@@ -65,24 +65,24 @@
     {
       "name": "Evangelio del día",
       "short_name": "Evangelio",
-      "description": "Ver el evangelio de hoy",
-      "url": "/",
+      "description": "Ver el evangelio y santo de hoy",
+      "url": "/?source=shortcut&tab=home",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/shortcut-home.png",
           "sizes": "96x96",
           "type": "image/png"
         }
       ]
     },
     {
-      "name": "Santo del día",
-      "short_name": "Santo",
-      "description": "Conocer el santo del día",
-      "url": "/",
+      "name": "Chat Parroquial",
+      "short_name": "Chat",
+      "description": "Hablar con el asistente IA",
+      "url": "/?source=shortcut&tab=chat",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/shortcut-chat.png",
           "sizes": "96x96",
           "type": "image/png"
         }
@@ -90,31 +90,34 @@
     },
     {
       "name": "Calendario",
-      "short_name": "Calendario",
+      "short_name": "Eventos",
       "description": "Ver eventos parroquiales",
-      "url": "/",
+      "url": "/?source=shortcut&tab=calendar",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/shortcut-calendar.png",
           "sizes": "96x96",
           "type": "image/png"
         }
       ]
     },
     {
-      "name": "Chat IA",
-      "short_name": "Chat",
-      "description": "Pregunta sobre la parroquia",
-      "url": "/",
+      "name": "Ajustes",
+      "short_name": "Ajustes",
+      "description": "Configurar la aplicación",
+      "url": "/?source=shortcut&tab=settings",
       "icons": [
         {
-          "src": "/icons/icon-96x96.png",
+          "src": "/icons/shortcut-settings.png",
           "sizes": "96x96",
           "type": "image/png"
         }
       ]
     }
   ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "screenshots": [
     {
       "src": "/screenshots/home-narrow.png",

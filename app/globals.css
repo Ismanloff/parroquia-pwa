@@ -218,3 +218,40 @@ html {
 .animate-toast-slide-down {
   animation: toast-slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ✅ PWA 2025: Padding dinámico con :has() para teclado virtual */
+/* Reduce padding automáticamente cuando hay inputs con focus */
+:root:has(input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible)
+  .chat-messages-area {
+  padding-bottom: 1rem !important; /* pb-4 */
+}
+
+:root:has(input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible)
+  .chat-input-area {
+  padding-bottom: 0.5rem !important; /* pb-2 */
+}
+
+/* Fallback para navegadores sin soporte :has() */
+@supports not selector(:has(*)) {
+  .chat-messages-area {
+    padding-bottom: 2rem; /* pb-8 como compromise */
+  }
+  .chat-input-area {
+    padding-bottom: 1.5rem; /* pb-6 como compromise */
+  }
+}
+
+/* ✅ PWA 2025: Ocultar tab navigation cuando teclado está visible */
+:root:has(input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible)
+  .tab-navigation-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* En iOS, cambiar a position absolute para evitar que flote */
+@supports (-webkit-touch-callout: none) {
+  :root:has(input:focus-visible, textarea:focus-visible, [contenteditable]:focus-visible)
+    .tab-navigation-bar {
+    position: absolute;
+  }
+}

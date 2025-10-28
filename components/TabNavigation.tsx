@@ -4,7 +4,6 @@ import { MessageCircle, Calendar, Home, Settings } from 'lucide-react';
 import { useNavigationStore, type TabType } from '@/lib/store/navigationStore';
 import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
-import { useEffect, useState } from 'react';
 
 const tabs = [
   {
@@ -35,60 +34,17 @@ const tabs = [
 
 export function TabNavigation() {
   const { activeTab, setActiveTab } = useNavigationStore();
-  const [positionType, setPositionType] = useState<'fixed' | 'absolute'>('fixed');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // iOS fix: cambiar a position absolute cuando un input tiene focus
-    const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT'
-      ) {
-        setPositionType('absolute');
-      }
-    };
-
-    const handleFocusOut = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT'
-      ) {
-        // Pequeño delay para que la transición sea suave
-        setTimeout(() => {
-          setPositionType('fixed');
-        }, 100);
-      }
-    };
-
-    document.addEventListener('focusin', handleFocusIn);
-    document.addEventListener('focusout', handleFocusOut);
-
-    return () => {
-      document.removeEventListener('focusin', handleFocusIn);
-      document.removeEventListener('focusout', handleFocusOut);
-    };
-  }, []);
 
   return (
     <nav
       role="navigation"
       aria-label="Navegación principal"
-      className="left-4 right-4 z-50"
+      className="tab-navigation-bar fixed left-4 right-4 z-50 transition-opacity duration-300"
       style={{
-        position: positionType,
         bottom: 'max(1.25rem, env(safe-area-inset-bottom, 1.25rem))',
         maxWidth: 'calc(100vw - 2rem)',
         marginLeft: 'auto',
         marginRight: 'auto',
-        transition: 'opacity 0.3s ease',
-        opacity: positionType === 'absolute' ? 0 : 1,
-        pointerEvents: positionType === 'absolute' ? 'none' : 'auto',
       }}
     >
       <div
