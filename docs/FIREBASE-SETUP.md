@@ -349,9 +349,31 @@ Una vez configurado Firebase, puedes:
 
 ---
 
-## ⚠️ Importante para iOS
+## ⚠️ IMPORTANTE para iOS - Configuración Adicional Requerida
 
-**iOS 16.4+** soporta notificaciones push en PWAs, pero con limitaciones:
+**iOS 16.4+** soporta notificaciones push en PWAs, pero requiere configuración adicional:
+
+### 🚨 Paso OBLIGATORIO para iOS:
+
+Firebase **NO PUEDE** enviar notificaciones a iOS sin configurar APNs (Apple Push Notification service).
+
+**Sin APNs configurado:**
+
+- ❌ Las notificaciones NO funcionarán en iPhone/iPad
+- ❌ El token FCM no se generará en dispositivos iOS
+- ✅ Android/Chrome funcionarán normalmente
+
+**Para habilitar notificaciones en iOS:**
+
+1. Debes tener una cuenta de Apple Developer (gratuita o de pago $99/año)
+2. Generar APNs Authentication Key (.p8) en Apple Developer Portal
+3. Subir ese archivo a Firebase Console
+
+**📖 Guía completa aquí**: [FIREBASE-APNS-IOS-SETUP.md](./FIREBASE-APNS-IOS-SETUP.md)
+
+**Tiempo estimado**: 20-30 minutos (si ya tienes cuenta Apple Developer)
+
+### Limitaciones adicionales de iOS:
 
 - ✅ Solo funciona si la PWA está instalada (ícono en pantalla de inicio)
 - ✅ Usuario debe dar permisos explícitos
@@ -359,8 +381,22 @@ Una vez configurado Firebase, puedes:
 - ❌ No hay sonido personalizado
 - ❌ No hay vibración personalizada
 
-**Android** tiene soporte completo sin limitaciones.
+**Android** tiene soporte completo sin limitaciones adicionales.
 
 ---
 
-**¿Problemas?** Revisa la sección de Troubleshooting arriba o abre un issue en GitHub.
+## 📋 Checklist Final
+
+- [ ] Firebase configurado (Partes 1-7)
+- [ ] Variables de entorno en Vercel
+- [ ] Notificaciones funcionan en Android/Chrome
+- [ ] **[SOLO iOS]** APNs configurado siguiendo [esta guía](./FIREBASE-APNS-IOS-SETUP.md)
+- [ ] Notificaciones funcionan en iOS
+
+---
+
+**¿Problemas?**
+
+- Revisa la sección de Troubleshooting arriba
+- Para problemas específicos de iOS: Ver [FIREBASE-APNS-IOS-SETUP.md](./FIREBASE-APNS-IOS-SETUP.md)
+- Script de diagnóstico iOS: Ver [IOS-DEBUG.md](./IOS-DEBUG.md)
