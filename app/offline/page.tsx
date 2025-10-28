@@ -1,10 +1,7 @@
+'use client';
+
 import { WifiOff, RefreshCw, Home, BookOpen, Calendar, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
-
-export const metadata = {
-  title: 'Sin conexión | Parroquia',
-  description: 'No hay conexión a internet',
-};
 
 export default function OfflinePage() {
   return (
