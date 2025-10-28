@@ -54,14 +54,21 @@ export default function AdminNotificationsPage() {
       }
 
       setLastResult(result);
-      toast.success(`Notificaciones enviadas: ${result.successful}/${result.total}`);
 
-      // Limpiar formulario
-      setForm({
-        title: '',
-        body: '',
-        url: '/',
-      });
+      if (result.total === 0) {
+        toast.error(
+          result.message ||
+            'No hay dispositivos registrados. Los usuarios deben activar las notificaciones primero.'
+        );
+      } else {
+        toast.success(`Notificaciones enviadas: ${result.successful}/${result.total}`);
+        // Limpiar formulario solo si se enviaron notificaciones
+        setForm({
+          title: '',
+          body: '',
+          url: '/',
+        });
+      }
     } catch (error) {
       console.error('Error:', error);
       toast.error(error instanceof Error ? error.message : 'Error al enviar notificaciones');
@@ -195,16 +202,41 @@ export default function AdminNotificationsPage() {
 
             {/* Resultado */}
             {lastResult && (
-              <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+              <div
+                className={`mt-6 p-4 rounded-xl ${
+                  lastResult.total === 0
+                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                    : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                }`}
+              >
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  {lastResult.total === 0 ? (
+                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-green-900 dark:text-green-100">
-                      Notificaciones enviadas
+                    <p
+                      className={`text-sm font-semibold ${
+                        lastResult.total === 0
+                          ? 'text-yellow-900 dark:text-yellow-100'
+                          : 'text-green-900 dark:text-green-100'
+                      }`}
+                    >
+                      {lastResult.total === 0
+                        ? 'No hay dispositivos registrados'
+                        : 'Notificaciones enviadas'}
                     </p>
-                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                      {lastResult.successful} exitosas de {lastResult.total} dispositivos
-                      {lastResult.failed > 0 && ` (${lastResult.failed} fallidas)`}
+                    <p
+                      className={`text-xs mt-1 ${
+                        lastResult.total === 0
+                          ? 'text-yellow-700 dark:text-yellow-300'
+                          : 'text-green-700 dark:text-green-300'
+                      }`}
+                    >
+                      {lastResult.total === 0
+                        ? 'Los usuarios deben activar las notificaciones desde /configuracion/notificaciones'
+                        : `${lastResult.successful} exitosas de ${lastResult.total} dispositivos${lastResult.failed > 0 ? ` (${lastResult.failed} fallidas)` : ''}`}
                     </p>
                   </div>
                 </div>

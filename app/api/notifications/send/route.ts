@@ -45,7 +45,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (!tokens || tokens.length === 0) {
-      return NextResponse.json({ message: 'No hay dispositivos registrados' }, { status: 200 });
+      return NextResponse.json(
+        {
+          success: true,
+          total: 0,
+          successful: 0,
+          failed: 0,
+          message:
+            'No hay dispositivos registrados. Los usuarios deben activar las notificaciones primero.',
+        },
+        { status: 200 }
+      );
     }
 
     console.log(`📤 Enviando notificación a ${tokens.length} dispositivos`);
