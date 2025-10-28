@@ -78,12 +78,8 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
           <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <UserPlus className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Crear Cuenta
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Únete a nuestra comunidad
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Crear Cuenta</h1>
+          <p className="text-slate-600 dark:text-slate-400">Únete a nuestra comunidad</p>
         </div>
 
         {/* Form */}
@@ -100,13 +96,19 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
 
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="register-name"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Nombre completo
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
+                  id="register-name"
+                  name="name"
+                  autoComplete="name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Juan Pérez"
@@ -118,13 +120,19 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="register-email"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Correo electrónico *
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="email"
+                  id="register-email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
@@ -137,13 +145,19 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="register-phone"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Teléfono
               </label>
               <div className="relative">
                 <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="tel"
+                  id="register-phone"
+                  name="tel"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+34 600 000 000"
@@ -155,13 +169,19 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="register-password"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Contraseña *
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  id="register-password"
+                  name="new-password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -175,16 +195,10 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Mínimo 6 caracteres
-              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Mínimo 6 caracteres</p>
             </div>
 
             {/* Submit Button */}

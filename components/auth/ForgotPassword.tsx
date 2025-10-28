@@ -46,8 +46,8 @@ export function ForgotPassword({ onSwitchToLogin }: ForgotPasswordProps) {
             </h2>
             <p className="text-slate-600 dark:text-slate-400 mb-6">
               Hemos enviado un enlace para restablecer tu contraseña a{' '}
-              <span className="font-semibold">{email}</span>. Revisa tu bandeja
-              de entrada y tu carpeta de spam.
+              <span className="font-semibold">{email}</span>. Revisa tu bandeja de entrada y tu
+              carpeta de spam.
             </p>
             <button
               onClick={onSwitchToLogin}
@@ -91,13 +91,19 @@ export function ForgotPassword({ onSwitchToLogin }: ForgotPasswordProps) {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="forgot-email"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Correo electrónico
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="email"
+                  id="forgot-email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"

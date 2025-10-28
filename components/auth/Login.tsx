@@ -41,12 +41,8 @@ export function Login({ onSwitchToRegister, onSwitchToForgot }: LoginProps) {
           <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <LogIn className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Iniciar Sesión
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Bienvenido de vuelta
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Iniciar Sesión</h1>
+          <p className="text-slate-600 dark:text-slate-400">Bienvenido de vuelta</p>
         </div>
 
         {/* Form */}
@@ -63,47 +59,57 @@ export function Login({ onSwitchToRegister, onSwitchToForgot }: LoginProps) {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="login-email"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Correo electrónico
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="email"
+                  id="login-email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@email.com"
                   className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   disabled={loading}
+                  required
                 />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2"
+              >
                 Contraseña
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  id="login-password"
+                  name="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-12 pr-12 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   disabled={loading}
+                  required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
