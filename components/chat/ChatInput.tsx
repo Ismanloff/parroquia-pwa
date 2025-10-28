@@ -46,7 +46,17 @@ export function ChatInput({
           </div>
 
           <button
-            onClick={onSend}
+            onMouseDown={(e) => {
+              // Prevenir blur del textarea para que funcione en iOS con teclado visible
+              e.preventDefault();
+              if (value.trim() && !isLoading) {
+                onSend();
+              }
+            }}
+            onClick={(e) => {
+              // Fallback para casos donde onMouseDown no se dispare
+              e.preventDefault();
+            }}
             disabled={!value.trim() || isLoading}
             className={cn(
               'p-3 rounded-xl transition-all duration-200',
