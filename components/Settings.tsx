@@ -11,12 +11,18 @@ import {
   Calendar,
   BookOpen,
   Sparkles,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { InstallButton } from '@/components/install';
+import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
 
 export function Settings() {
   const { themeMode, setThemeMode } = useTheme();
+  const { user, signOut, isSupabaseConfigured } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermission>('default');
@@ -76,6 +82,25 @@ export function Settings() {
         setSaintNotifications(value);
         localStorage.setItem('notifications_saints', String(value));
         break;
+    }
+  };
+
+  const handleLogout = async () => {
+    haptics.medium();
+
+    // Confirmación antes de cerrar sesión
+    const confirmed = window.confirm('¿Estás seguro de que quieres cerrar sesión?');
+
+    if (!confirmed) return;
+
+    try {
+      await signOut();
+      haptics.success();
+      toast.success('Sesión cerrada correctamente');
+    } catch (error) {
+      haptics.error();
+      toast.error('Error al cerrar sesión');
+      console.error('Error al cerrar sesión:', error);
     }
   };
 
@@ -316,7 +341,7 @@ export function Settings() {
 
         {/* Información de la app */}
         <div
-          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30"
+          className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6"
           style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
         >
           <h2 className="text-[17px] font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
@@ -341,6 +366,42 @@ export function Settings() {
             </div>
           </div>
         </div>
+
+        {/* Cuenta de usuario y Cerrar Sesión - Solo si está autenticado */}
+        {isSupabaseConfigured && user && (
+          <div
+            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6"
+            style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+          >
+            <h2 className="text-[17px] font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
+              Cuenta
+            </h2>
+
+            {/* Info del usuario */}
+            <div className="mb-6 p-4 bg-slate-50/50 dark:bg-slate-700/30 rounded-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+                  <User className="w-6 h-6 text-white" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                    {user.email}
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">Cuenta activa</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botón Cerrar Sesión */}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-2 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 font-semibold rounded-2xl transition-all active:scale-95"
+            >
+              <LogOut className="w-5 h-5" strokeWidth={2.5} />
+              Cerrar sesión
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
