@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { Providers } from '@/components/Providers';
 import { ToastContainer } from '@/components/ui/ToastContainer';
 import { Onboarding } from '@/components/Onboarding';
+import { UpdateBanner } from '@/components/UpdateBanner';
 import './globals.css';
 
 const geistSans = Geist({
@@ -99,6 +100,8 @@ export default function RootLayout({
           <main id="main-content" role="main">
             {children}
           </main>
+          {/* Banner de actualizaci\u00f3n PWA - Muestra cuando hay nueva versi\u00f3n */}
+          <UpdateBanner />
         </Providers>
       </body>
     </html>

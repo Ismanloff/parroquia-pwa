@@ -6,7 +6,124 @@ Este documento resume todas las mejoras implementadas siguiendo los estándares 
 
 ---
 
-## ✨ Nuevas Funcionalidades
+## 🆕 Última Actualización: Service Worker + Notificaciones (Octubre 2025)
+
+### 🔄 Migración a Serwist
+
+**Fecha**: Octubre 2025
+**Breaking Change**: Ahora usa webpack en lugar de turbopack
+
+**Cambios principales:**
+
+- ✅ Migrado de `@ducanh2912/next-pwa` a `@serwist/next`
+- ✅ Service Worker con estrategias de caché inteligentes
+- ✅ Sistema de notificaciones de actualización
+- ✅ Modo offline completo para evangelio, santo y calendario
+- ✅ Scripts con `--webpack` flag
+
+### 📱 Sistema de Actualizaciones Automáticas
+
+**Usuario abre la app:**
+
+1. Service Worker detecta si hay nueva versión
+2. Banner aparece automáticamente: "🎉 Nueva versión disponible"
+3. Usuario puede:
+   - **Actualizar**: App se recarga con nueva versión
+   - **Más tarde**: Banner se oculta (volverá a aparecer)
+
+**Características:**
+
+- Verificación automática cada vez que abre la app
+- Banner elegante con efecto glass morphism
+- No interrumpe el uso de la app
+- Usuario decide cuándo actualizar
+- Recarga automática tras actualización
+
+**Componentes nuevos:**
+
+- `lib/hooks/useServiceWorker.ts` - Hook para detectar actualizaciones
+- `components/UpdateBanner.tsx` - Banner de notificación UI
+- `app/sw.ts` - Service Worker con estrategias de caché
+
+### 💾 Modo Offline Completo
+
+**APIs cacheadas:**
+
+| API               | Estrategia           | Duración | Offline |
+| ----------------- | -------------------- | -------- | ------- |
+| Evangelio del día | StaleWhileRevalidate | 24h      | ✅      |
+| Santo del día     | StaleWhileRevalidate | 24h      | ✅      |
+| Calendario        | NetworkFirst         | 5min     | ✅      |
+| Assets (JS/CSS)   | CacheFirst           | 7 días   | ✅      |
+| Chat              | NetworkOnly          | -        | ❌      |
+
+**Resultado:**
+
+- Usuario puede ver evangelio y santo SIN internet
+- Calendario muestra eventos recientes offline
+- App carga instantáneamente (assets cacheados)
+- Menor consumo de datos móviles
+
+### 🛠️ Cambios Técnicos
+
+**Archivos modificados:**
+
+```
+next.config.ts        - Migrado a withSerwistInit
+package.json          - Scripts con --webpack
+tsconfig.json         - Añadidos tipos de Serwist
+.gitignore           - Archivos SW ignorados
+app/layout.tsx       - Integrado UpdateBanner
+app/globals.css      - Animaciones slide-up
+```
+
+**Archivos nuevos:**
+
+```
+app/sw.ts                        - Service Worker
+lib/hooks/useServiceWorker.ts   - Hook de actualizaciones
+components/UpdateBanner.tsx      - Banner UI
+docs/SERVICE-WORKER.md           - Documentación técnica
+```
+
+### ⚠️ Breaking Changes
+
+**Webpack obligatorio**:
+
+```bash
+# ANTES
+npm run dev
+npm run build
+
+# AHORA
+npm run dev --webpack
+npm run build --webpack
+```
+
+Los scripts ya están actualizados en package.json, por lo que funciona igual.
+
+**Impacto en desarrollo:**
+
+- Primera compilación: ~2-3 segundos más lenta
+- Recargas en caliente: Sin cambios
+- Producción: Sin cambios (ya usa webpack)
+
+**¿Por qué webpack?**
+Serwist (y todas las soluciones PWA) requieren webpack plugins. Turbopack no soporta plugins todavía.
+
+### 📚 Documentación
+
+**Nueva documentación:**
+
+- [docs/SERVICE-WORKER.md](./SERVICE-WORKER.md) - Guía completa del Service Worker
+  - Estrategias de caché explicadas
+  - Cómo funciona el sistema de actualizaciones
+  - Debugging y troubleshooting
+  - Cómo modificar estrategias
+
+---
+
+## ✨ Funcionalidades Anteriores
 
 ### 1. App Shortcuts (Accesos Directos)
 
