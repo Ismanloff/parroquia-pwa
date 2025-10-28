@@ -3,10 +3,13 @@
   "short_name": "Parroquia",
   "description": "Tu asistente parroquial con IA disponible 24/7",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
   "categories": ["lifestyle", "productivity"],
   "icons": [
     {
