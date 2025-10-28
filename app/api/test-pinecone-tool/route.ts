@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Buscar en Pinecone
     const queryResults = await index.query({
-      vector: embeddingResponse.data[0].embedding,
+      vector: embeddingResponse.data[0]?.embedding || [],
       topK: 5,
       includeMetadata: true
     });

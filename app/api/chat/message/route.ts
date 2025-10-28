@@ -72,7 +72,7 @@ async function moderateContent(message: string, openaiClient: OpenAI): Promise<{
     });
 
     const result = moderation.results[0];
-    if (result.flagged) {
+    if (result?.flagged) {
       const flaggedCategories = Object.entries(result.categories)
         .filter(([_, flagged]) => flagged)
         .map(([category]) => category);
@@ -138,7 +138,7 @@ function isGenericResponse(message: string): string | null {
         '¡Para eso estoy! ¿Tienes alguna otra pregunta?',
         '¡Un placer! No dudes en preguntar si necesitas más información.',
       ];
-      return responses[Math.floor(Math.random() * responses.length)];
+      return responses[Math.floor(Math.random() * responses.length)] || null;
     }
   }
 
@@ -359,8 +359,16 @@ export async function POST(request: NextRequest) {
       1000
     );
 
-    let finalMessage = response.choices[0].message;
+    let finalMessage = response.choices[0]?.message;
     let toolResults: any[] = [];
+
+    // Check if finalMessage exists
+    if (!finalMessage) {
+      return NextResponse.json(
+        { error: 'No response from AI' },
+        { status: 500 }
+      );
+    }
 
     // ⚡ PASO 2: Loop de tool execution (máximo 3 iteraciones)
     let iterations = 0;
@@ -530,7 +538,7 @@ export async function POST(request: NextRequest) {
         max_tokens: 200, // ⚡ Reducido para velocidad
       });
 
-      finalMessage = response.choices[0].message;
+      finalMessage = response.choices[0]?.message || finalMessage;
     }
 
     // 📊 TRACING: Tiempo de ejecución

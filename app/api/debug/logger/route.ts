@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const logs: any[] = [];
 const MAX_LOGS = 500; // Máximo 500 logs en memoria
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   // Obtener logs
   return NextResponse.json({
     logs: logs,
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   // Limpiar todos los logs
   logs.length = 0;
   return NextResponse.json({ success: true, message: 'Logs cleared' });

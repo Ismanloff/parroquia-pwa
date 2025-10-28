@@ -14,7 +14,7 @@ const DEFAULT_GOSPEL = {
  * Devuelve el evangelio del día según el calendario litúrgico
  * Usa Supabase para obtener datos reales de la base de datos
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Si Supabase no está configurado, devolver evangelio por defecto
     if (!isSupabaseConfigured || !supabase) {

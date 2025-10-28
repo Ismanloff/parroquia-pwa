@@ -33,7 +33,7 @@ const EVENT_COLORS = [
 
 const getEventColor = (eventTitle: string) => {
   const hash = eventTitle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return EVENT_COLORS[hash % EVENT_COLORS.length];
+  return EVENT_COLORS[hash % EVENT_COLORS.length] || EVENT_COLORS[0]!;
 };
 
 export function Calendar() {
@@ -96,14 +96,14 @@ export function Calendar() {
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0) {
+    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0 && e.touches[0]) {
       touchStartY.current = e.touches[0].clientY;
       setIsPulling(true);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isPulling || !scrollContainerRef.current) return;
+    if (!isPulling || !scrollContainerRef.current || !e.touches[0]) return;
 
     const touchY = e.touches[0].clientY;
     const distance = touchY - touchStartY.current;
@@ -233,7 +233,7 @@ export function Calendar() {
     const eventText = `${event.title}\n${formatDate(event.start)}\n${!event.allDay ? `${formatTime(event.start)} - ${formatTime(event.end)}` : 'Todo el día'}${event.location ? `\nLugar: ${event.location}` : ''}${event.description ? `\n\n${event.description}` : ''}`;
 
     // Intentar usar la Web Share API si está disponible
-    if (navigator.share && navigator.canShare) {
+    if (navigator.share) {
       try {
         await navigator.share({
           title: event.title,

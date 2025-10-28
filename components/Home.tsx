@@ -80,14 +80,14 @@ export function Home() {
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0) {
+    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0 && e.touches[0]) {
       touchStartY.current = e.touches[0].clientY;
       setIsPulling(true);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isPulling || !scrollContainerRef.current) return;
+    if (!isPulling || !scrollContainerRef.current || !e.touches[0]) return;
 
     const touchY = e.touches[0].clientY;
     const distance = touchY - touchStartY.current;

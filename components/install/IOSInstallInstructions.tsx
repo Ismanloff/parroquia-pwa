@@ -44,7 +44,7 @@ export function IOSInstallInstructions({ isOpen, onClose }: IOSInstallInstructio
     },
   ];
 
-  const Step = steps[currentStep];
+  const Step = steps[currentStep] || steps[0]!;
   const Icon = Step.icon;
 
   return (

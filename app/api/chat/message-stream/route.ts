@@ -3,7 +3,7 @@ import { Agent, AgentInputItem, Runner, setDefaultOpenAIKey } from "@openai/agen
 import { calendarTool } from '../tools/calendarTool';
 import { resourcesTool } from '../tools/resourcesTool';
 import { pineconeTool } from '../tools/pineconeTool';
-import { detectQuickActions } from '../utils/quickActionsConfig';
+// import { detectQuickActions } from '../utils/quickActionsConfig';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
@@ -99,7 +99,7 @@ Responde SOLO con la pregunta reescrita, sin explicaciones.`,
       ]
     });
 
-    const rewritten = response.content[0].type === 'text' ? response.content[0].text.trim() : currentMessage;
+    const rewritten = response.content[0]?.type === 'text' ? response.content[0]?.text?.trim() : currentMessage;
     console.log(`✅ [Conversational Rewriting] Reescrito a: "${rewritten}"`);
 
     return rewritten;
@@ -355,7 +355,7 @@ export async function POST(request: NextRequest) {
           let accumulatedText = '';
           // Attachments DESACTIVADOS - siempre null
           // let finalAttachments: any[] | null = null;
-          const originalMessage = message; // Guardar mensaje para detectar quickActions
+          // const originalMessage = message; // Guardar mensaje para detectar quickActions
           let hasStartedStreaming = false; // Flag para limpiar status cuando empiece streaming
 
           // ⚡ STREAMING: Iterar eventos del agente

@@ -71,7 +71,7 @@ async function moderateContent(message: string, openaiClient: OpenAI): Promise<{
     });
 
     const result = moderation.results[0];
-    if (result.flagged) {
+    if (result?.flagged) {
       const flaggedCategories = Object.entries(result.categories)
         .filter(([_, flagged]) => flagged)
         .map(([category]) => category);
@@ -281,7 +281,7 @@ function isGenericResponse(message: string): string | null {
         '¡Para eso estoy! ¿Tienes alguna otra pregunta?',
         '¡Un placer! No dudes en preguntar si necesitas más información.',
       ];
-      return responses[Math.floor(Math.random() * responses.length)];
+      return responses[Math.floor(Math.random() * responses.length)] || null;
     }
   }
 

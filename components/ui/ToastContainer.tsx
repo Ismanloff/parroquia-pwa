@@ -10,7 +10,7 @@ export function ToastContainer() {
 
   useEffect(() => {
     const unsubscribe = toast.subscribe(setToasts);
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   const getIcon = (type: Toast['type']) => {

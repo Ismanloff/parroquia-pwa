@@ -98,7 +98,7 @@ Responde SOLO con las 3 variaciones, una por línea, sin numeración.`,
       ]
     });
 
-    const content = response.content[0].type === 'text' ? response.content[0].text : '';
+    const content = response.content[0]?.type === 'text' ? response.content[0]?.text : '';
     const variations = content
       .split('\n')
       .map(line => line.trim())
@@ -224,7 +224,7 @@ NO uses esta herramienta para:
       // 4. Buscar en Pinecone con cada embedding EN PARALELO
       const searchPromises = embeddingResponses.map(embeddingResponse =>
         index.query({
-          vector: embeddingResponse.data[0].embedding,
+          vector: embeddingResponse.data[0]?.embedding || [],
           topK: 5, // Aumentado porque luego fusionamos
           includeMetadata: true,
           filter: Object.keys(filter).length > 0 ? filter : undefined
@@ -237,9 +237,11 @@ NO uses esta herramienta para:
       // DEBUG: Ver cuántos matches hay ANTES de fusion
       const totalMatches = searchResults.reduce((sum, result) => sum + (result.matches?.length || 0), 0);
       console.log(`🔍 [DEBUG] Total matches antes de fusion: ${totalMatches}`);
-      if (totalMatches > 0 && searchResults[0].matches && searchResults[0].matches.length > 0) {
-        const firstMatch = searchResults[0].matches[0];
-        console.log(`🔍 [DEBUG] Primer match - ID: ${firstMatch.id}, Score: ${firstMatch.score}, Metadata:`, firstMatch.metadata);
+      if (totalMatches > 0 && searchResults[0]?.matches && searchResults[0]?.matches.length > 0) {
+        const firstMatch = searchResults[0]?.matches[0];
+        if (firstMatch) {
+          console.log(`🔍 [DEBUG] Primer match - ID: ${firstMatch.id}, Score: ${firstMatch.score}, Metadata:`, firstMatch.metadata);
+        }
       }
 
       // 5. Combinar resultados usando Reciprocal Rank Fusion
@@ -257,7 +259,7 @@ NO uses esta herramienta para:
         // Buscar de nuevo SIN filtro
         const fallbackSearchPromises = embeddingResponses.map(embeddingResponse =>
           index.query({
-            vector: embeddingResponse.data[0].embedding,
+            vector: embeddingResponse.data[0]?.embedding || [],
             topK: 5,
             includeMetadata: true
             // Sin filtro

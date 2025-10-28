@@ -85,7 +85,7 @@ export function Onboarding() {
 
   if (!isOpen) return null;
 
-  const slide = slides[currentSlide];
+  const slide = slides[currentSlide] || slides[0]!;
   const Icon = slide.icon;
   const isLastSlide = currentSlide === slides.length - 1;
 
