@@ -25,12 +25,26 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   overscroll-behavior-y: none; /* ✅ Previene bounce scroll en iOS */
   -webkit-overflow-scrolling: touch; /* ✅ Smooth scrolling */
+  overflow-x: hidden; /* ✅ Elimina scroll horizontal */
 }
 
 /* ✅ iOS: Prevenir bounce scroll y optimizar altura */
 html {
   overscroll-behavior-y: none;
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden; /* ✅ Elimina scroll horizontal */
+}
+
+/* ✅ Ocultar scrollbar en todos los navegadores */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
 }
 
 /* ✅ iOS: Altura completa en dispositivos móviles */

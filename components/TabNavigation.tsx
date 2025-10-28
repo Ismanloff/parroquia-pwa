@@ -4,6 +4,7 @@ import { MessageCircle, Calendar, Home, Settings } from 'lucide-react';
 import { useNavigationStore, type TabType } from '@/lib/store/navigationStore';
 import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
+import { useEffect, useState } from 'react';
 
 const tabs = [
   {
@@ -34,6 +35,34 @@ const tabs = [
 
 export function TabNavigation() {
   const { activeTab, setActiveTab } = useNavigationStore();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    // Detectar cuando el teclado aparece en iOS usando Visual Viewport API
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+
+    const handleResize = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+
+      // Si el viewport height es significativamente menor que window.innerHeight, el teclado está visible
+      const keyboardVisible = viewport.height < window.innerHeight * 0.75;
+      setIsKeyboardVisible(keyboardVisible);
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+    };
+  }, []);
+
+  // Ocultar el nav cuando el teclado está visible
+  if (isKeyboardVisible) {
+    return null;
+  }
 
   return (
     <nav

@@ -45,6 +45,7 @@ export const viewport: Viewport = {
   userScalable: true,
   themeColor: '#2563eb',
   viewportFit: 'cover', // ✅ Cubrir toda la pantalla (notch de iPhone)
+  interactiveWidget: 'resizes-content', // ✅ Redimensiona el layout cuando aparece el teclado (iOS)
 };
 
 export default function RootLayout({

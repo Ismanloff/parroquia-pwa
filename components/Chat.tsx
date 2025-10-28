@@ -60,7 +60,7 @@ export function Chat() {
       </header>
 
       {/* Messages - área de scroll optimizada */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-32">
         <MessageList
           messages={messages}
           isLoading={isLoading}
@@ -77,8 +77,8 @@ export function Chat() {
         />
       </div>
 
-      {/* Input - fijo en el bottom */}
-      <div className="flex-shrink-0 pb-20">
+      {/* Input - fijo en el bottom con más espacio para el tab navigation */}
+      <div className="flex-shrink-0 pb-28">
         <ChatInput
           value={inputText}
           onChange={setInputText}
