@@ -317,7 +317,7 @@ export function Home() {
               </div>
               <div className="flex-1 pt-1">
                 <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
-                  Evangelio del día - NUEVA VERSIÓN
+                  Evangelio del día
                 </p>
                 <h2
                   id="evangelio-heading"
