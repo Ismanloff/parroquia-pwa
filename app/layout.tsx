@@ -4,6 +4,8 @@ import { Providers } from '@/components/Providers';
 import { ToastContainer } from '@/components/ui/ToastContainer';
 import { Onboarding } from '@/components/Onboarding';
 import { UpdateBanner } from '@/components/UpdateBanner';
+import { InstallBanner } from '@/components/install/InstallBanner';
+import { NotificationPrompt } from '@/components/NotificationPrompt';
 import './globals.css';
 
 const geistSans = Geist({
@@ -102,6 +104,10 @@ export default function RootLayout({
           </main>
           {/* Banner de actualizaci\u00f3n PWA - Muestra cuando hay nueva versi\u00f3n */}
           <UpdateBanner />
+          {/* Banner de instalaci\u00f3n PWA - Invita a instalar la app */}
+          <InstallBanner delay={30} position="bottom" />
+          {/* Prompt de notificaciones push */}
+          <NotificationPrompt />
         </Providers>
       </body>
     </html>
