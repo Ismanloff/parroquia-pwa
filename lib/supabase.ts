@@ -9,14 +9,16 @@ let client: ReturnType<typeof createClient<Database>> | null = null;
 if (supabaseUrl && supabaseAnonKey) {
   client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: false, // No persistence en servidor Next.js
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
+      persistSession: true, // ✅ Persistir sesión en localStorage
+      autoRefreshToken: true, // ✅ Refrescar token automáticamente
+      detectSessionInUrl: true, // ✅ Detectar sesión en URL (OAuth redirects)
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'parroquia-auth-token',
     },
   });
 } else {
   console.warn(
-    'Supabase configuration missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your .env file.',
+    'Supabase configuration missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your .env file.'
   );
 }
 
