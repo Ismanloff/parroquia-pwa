@@ -35,45 +35,60 @@ const tabs = [
 
 export function TabNavigation() {
   const { activeTab, setActiveTab } = useNavigationStore();
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [positionType, setPositionType] = useState<'fixed' | 'absolute'>('fixed');
 
   useEffect(() => {
-    // Detectar cuando el teclado aparece en iOS usando Visual Viewport API
-    if (typeof window === 'undefined' || !window.visualViewport) return;
+    if (typeof window === 'undefined') return;
 
-    const handleResize = () => {
-      const viewport = window.visualViewport;
-      if (!viewport) return;
-
-      // Si el viewport height es significativamente menor que window.innerHeight, el teclado está visible
-      const keyboardVisible = viewport.height < window.innerHeight * 0.75;
-      setIsKeyboardVisible(keyboardVisible);
+    // iOS fix: cambiar a position absolute cuando un input tiene focus
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT'
+      ) {
+        setPositionType('absolute');
+      }
     };
 
-    window.visualViewport.addEventListener('resize', handleResize);
-    window.visualViewport.addEventListener('scroll', handleResize);
+    const handleFocusOut = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT'
+      ) {
+        // Pequeño delay para que la transición sea suave
+        setTimeout(() => {
+          setPositionType('fixed');
+        }, 100);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
 
     return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize);
-      window.visualViewport?.removeEventListener('scroll', handleResize);
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
     };
   }, []);
-
-  // Ocultar el nav cuando el teclado está visible
-  if (isKeyboardVisible) {
-    return null;
-  }
 
   return (
     <nav
       role="navigation"
       aria-label="Navegación principal"
-      className="fixed left-4 right-4 z-50"
+      className="left-4 right-4 z-50"
       style={{
+        position: positionType,
         bottom: 'max(1.25rem, env(safe-area-inset-bottom, 1.25rem))',
         maxWidth: 'calc(100vw - 2rem)',
         marginLeft: 'auto',
         marginRight: 'auto',
+        transition: 'opacity 0.3s ease',
+        opacity: positionType === 'absolute' ? 0 : 1,
+        pointerEvents: positionType === 'absolute' ? 'none' : 'auto',
       }}
     >
       <div
