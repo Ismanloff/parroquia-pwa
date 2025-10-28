@@ -10,16 +10,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/Loading';
 
 // Lazy loading de componentes pesados - se cargan solo cuando se necesitan
-const Calendar = dynamic(() => import('@/components/Calendar').then(mod => ({ default: mod.Calendar })), {
-  loading: () => (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Loading message="Cargando calendario..." />
-    </div>
-  ),
-  ssr: false,
-});
+const Calendar = dynamic(
+  () => import('@/components/Calendar').then((mod) => ({ default: mod.Calendar })),
+  {
+    loading: () => (
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <Loading message="Cargando calendario..." />
+      </div>
+    ),
+    ssr: false,
+  }
+);
 
-const Chat = dynamic(() => import('@/components/Chat').then(mod => ({ default: mod.Chat })), {
+const Chat = dynamic(() => import('@/components/Chat').then((mod) => ({ default: mod.Chat })), {
   loading: () => (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Loading message="Cargando chat..." />
@@ -28,14 +31,17 @@ const Chat = dynamic(() => import('@/components/Chat').then(mod => ({ default: m
   ssr: false,
 });
 
-const Settings = dynamic(() => import('@/components/Settings').then(mod => ({ default: mod.Settings })), {
-  loading: () => (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Loading message="Cargando ajustes..." />
-    </div>
-  ),
-  ssr: false,
-});
+const Settings = dynamic(
+  () => import('@/components/Settings').then((mod) => ({ default: mod.Settings })),
+  {
+    loading: () => (
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <Loading message="Cargando ajustes..." />
+      </div>
+    ),
+    ssr: false,
+  }
+);
 
 export default function Home() {
   const { activeTab } = useNavigationStore();
@@ -57,7 +63,7 @@ export default function Home() {
 
   // Usuario autenticado o Supabase no configurado (modo demo): mostrar la app
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-dvh overflow-hidden">
       {/* Contenido principal - cambia según el tab activo */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'home' && <HomeComponent />}

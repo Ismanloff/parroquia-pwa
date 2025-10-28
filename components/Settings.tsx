@@ -111,7 +111,7 @@ export function Settings() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header - iOS 26 Liquid Glass Lite */}
       <div
         className="relative px-6 pt-5 pb-4 overflow-hidden"

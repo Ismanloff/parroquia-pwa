@@ -46,6 +46,28 @@ html {
   }
 }
 
+/* ✅ Dynamic viewport height support (dvh) - mejor para iOS */
+@supports (height: 100dvh) {
+  .h-dvh {
+    height: 100dvh;
+  }
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+}
+
+/* Fallback para navegadores que no soportan dvh */
+@supports not (height: 100dvh) {
+  .h-dvh {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  .min-h-dvh {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
+
 /* iOS 26 Liquid Glass Lite Animations */
 @keyframes fade-in {
   from {

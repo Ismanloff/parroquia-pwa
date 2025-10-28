@@ -13,7 +13,13 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  // Initialize theme from localStorage on client side only
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme-mode') as ThemeMode) || 'system';
+    }
+    return 'system';
+  });
   const [isDark, setIsDark] = useState(false);
 
   // Aplicar tema al DOM
@@ -40,14 +46,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Cargar y aplicar tema inicial
+  // Apply theme on mount (inline script in layout.tsx should have already applied it)
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('theme-mode') as ThemeMode) || 'system';
-    // Use queueMicrotask to avoid synchronous setState in effect
-    queueMicrotask(() => {
-      setThemeModeState(savedTheme);
-      applyTheme(savedTheme);
-    });
+    applyTheme(themeMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Detectar cambios en preferencia del sistema

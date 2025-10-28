@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, X, List, ChevronLeft, ChevronRight, RefreshCw, Share2, Download } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  X,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Share2,
+  Download,
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
@@ -315,14 +326,14 @@ END:VCALENDAR`;
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100">
         <Loading message="Cargando eventos..." />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header con fecha actual y color litúrgico - iOS 26 Liquid Glass Lite */}
       <div
         className="relative px-6 pt-5 pb-4 overflow-hidden"
@@ -331,7 +342,10 @@ END:VCALENDAR`;
         }}
       >
         {/* Efecto Liquid Glass sutil en el fondo */}
-        <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl" style={{ backdropFilter: 'blur(20px) saturate(180%)' }} />
+        <div
+          className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl"
+          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+        />
 
         <div className="relative z-10">
           {/* Día de la semana */}
@@ -345,7 +359,9 @@ END:VCALENDAR`;
               className="p-2 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all"
               style={{ backdropFilter: 'blur(10px)' }}
             >
-              <RefreshCw className={`w-4 h-4 text-slate-700 dark:text-slate-300 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 text-slate-700 dark:text-slate-300 ${refreshing ? 'animate-spin' : ''}`}
+              />
             </button>
           </div>
 
@@ -355,7 +371,10 @@ END:VCALENDAR`;
           </h1>
 
           {/* Badge del tiempo litúrgico */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 dark:bg-slate-800/70 backdrop-blur-md shadow-sm" style={{ backdropFilter: 'blur(10px) saturate(180%)' }}>
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 dark:bg-slate-800/70 backdrop-blur-md shadow-sm"
+            style={{ backdropFilter: 'blur(10px) saturate(180%)' }}
+          >
             <div
               className="w-2 h-2 rounded-full shadow-sm"
               style={{ backgroundColor: liturgicalSeason.gradient[0] }}
@@ -369,7 +388,10 @@ END:VCALENDAR`;
 
       {/* Tabs flotantes - Liquid Glass Lite iOS 26 */}
       <div className="px-6 pt-2 pb-4">
-        <div className="flex gap-1 p-1 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg border border-white/20 dark:border-slate-700/30" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+        <div
+          className="flex gap-1 p-1 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg border border-white/20 dark:border-slate-700/30"
+          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+        >
           <button
             onClick={() => setViewMode('week')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 ease-out min-h-[44px] ${
@@ -406,7 +428,7 @@ END:VCALENDAR`;
         onTouchEnd={handleTouchEnd}
         style={{
           transform: isPulling ? `translateY(${pullDistance}px)` : 'none',
-          transition: isPulling ? 'none' : 'transform 0.3s ease-out'
+          transition: isPulling ? 'none' : 'transform 0.3s ease-out',
         }}
       >
         {/* Pull to refresh indicator - iOS 26 Liquid Glass */}
@@ -415,15 +437,18 @@ END:VCALENDAR`;
             className="absolute top-0 left-0 right-0 flex items-center justify-center z-50"
             style={{
               transform: `translateY(-${Math.max(0, 50 - pullDistance)}px)`,
-              opacity: Math.min(pullDistance / 60, 1)
+              opacity: Math.min(pullDistance / 60, 1),
             }}
           >
-            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-full p-4 shadow-2xl border border-white/30 dark:border-slate-700/30" style={{ backdropFilter: 'blur(30px) saturate(180%)' }}>
+            <div
+              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-full p-4 shadow-2xl border border-white/30 dark:border-slate-700/30"
+              style={{ backdropFilter: 'blur(30px) saturate(180%)' }}
+            >
               <RefreshCw
                 className={`w-6 h-6 text-blue-600 dark:text-blue-400 ${pullDistance > 60 ? 'animate-spin' : ''}`}
                 style={{
                   transform: pullDistance > 60 ? 'none' : `rotate(${pullDistance * 4}deg)`,
-                  transition: pullDistance > 60 ? 'none' : 'transform 0.1s ease-out'
+                  transition: pullDistance > 60 ? 'none' : 'transform 0.1s ease-out',
                 }}
                 strokeWidth={2.5}
               />
@@ -434,13 +459,23 @@ END:VCALENDAR`;
           // Vista Semanal - iOS 26 Liquid Glass Lite
           <div className="space-y-7">
             {weekEvents.length === 0 ? (
-              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-[28px] p-12 text-center shadow-lg border border-white/20 dark:border-slate-700/30" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+              <div
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-[28px] p-12 text-center shadow-lg border border-white/20 dark:border-slate-700/30"
+                style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+              >
                 <div className="w-[88px] h-[88px] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
-                  <CalendarIcon className="w-11 h-11 text-slate-400 dark:text-slate-500" strokeWidth={2} />
+                  <CalendarIcon
+                    className="w-11 h-11 text-slate-400 dark:text-slate-500"
+                    strokeWidth={2}
+                  />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2.5 tracking-tight">No hay eventos</h3>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2.5 tracking-tight">
+                  No hay eventos
+                </h3>
                 <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-[15px]">
-                  No tienes eventos programados<br />para los próximos 7 días
+                  No tienes eventos programados
+                  <br />
+                  para los próximos 7 días
                 </p>
               </div>
             ) : (
@@ -448,7 +483,11 @@ END:VCALENDAR`;
                 const events = getEventsForDay(day, weekEvents);
                 if (events.length === 0) return null;
 
-                const dayLabel = isToday(day) ? 'Hoy' : isTomorrow(day) ? 'Mañana' : formatShortDate(day);
+                const dayLabel = isToday(day)
+                  ? 'Hoy'
+                  : isTomorrow(day)
+                    ? 'Mañana'
+                    : formatShortDate(day);
 
                 return (
                   <div key={day.toISOString()} className="mb-7">
@@ -534,7 +573,11 @@ END:VCALENDAR`;
                                         className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm"
                                         style={{ backgroundColor: colors.light }}
                                       >
-                                        <Clock className="w-4 h-4" style={{ color: colors.primary }} strokeWidth={2.5} />
+                                        <Clock
+                                          className="w-4 h-4"
+                                          style={{ color: colors.primary }}
+                                          strokeWidth={2.5}
+                                        />
                                         <span
                                           className="text-sm font-semibold tracking-tight"
                                           style={{ color: colors.primary }}
@@ -546,7 +589,10 @@ END:VCALENDAR`;
 
                                     {event.location && (
                                       <div className="flex items-center gap-2">
-                                        <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" strokeWidth={2.5} />
+                                        <MapPin
+                                          className="w-4 h-4 text-slate-400 dark:text-slate-500"
+                                          strokeWidth={2.5}
+                                        />
                                         <span className="text-sm font-medium text-slate-600 dark:text-slate-400 tracking-tight">
                                           {event.location}
                                         </span>
@@ -581,7 +627,10 @@ END:VCALENDAR`;
           </div>
         ) : (
           // Vista Mensual - iOS 26 Liquid Glass Lite
-          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+          <div
+            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30"
+            style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
+          >
             {/* Selector de mes - Controles táctiles 44x44pt */}
             <div className="flex items-center justify-between mb-7">
               <button
@@ -589,11 +638,16 @@ END:VCALENDAR`;
                 className="w-11 h-11 rounded-full bg-white/60 dark:bg-slate-700/60 backdrop-blur-md hover:bg-white/90 dark:hover:bg-slate-700/90 flex items-center justify-center transition-all shadow-sm"
                 style={{ backdropFilter: 'blur(10px)' }}
               >
-                <ChevronLeft className="w-[22px] h-[22px] text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
+                <ChevronLeft
+                  className="w-[22px] h-[22px] text-blue-600 dark:text-blue-400"
+                  strokeWidth={2.5}
+                />
               </button>
 
               <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {dayjs(selectedMonth).format('MMMM YYYY').replace(/^\w/, c => c.toUpperCase())}
+                {dayjs(selectedMonth)
+                  .format('MMMM YYYY')
+                  .replace(/^\w/, (c) => c.toUpperCase())}
               </h2>
 
               <button
@@ -601,14 +655,20 @@ END:VCALENDAR`;
                 className="w-11 h-11 rounded-full bg-white/60 dark:bg-slate-700/60 backdrop-blur-md hover:bg-white/90 dark:hover:bg-slate-700/90 flex items-center justify-center transition-all shadow-sm"
                 style={{ backdropFilter: 'blur(10px)' }}
               >
-                <ChevronRight className="w-[22px] h-[22px] text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
+                <ChevronRight
+                  className="w-[22px] h-[22px] text-blue-600 dark:text-blue-400"
+                  strokeWidth={2.5}
+                />
               </button>
             </div>
 
             {/* Días de la semana - SF Typography */}
             <div className="grid grid-cols-7 gap-2 mb-4">
               {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
-                <div key={i} className="text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <div
+                  key={i}
+                  className="text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                >
                   {day}
                 </div>
               ))}
@@ -620,8 +680,11 @@ END:VCALENDAR`;
                 const eventsForDay = day ? getEventsForDay(day, monthEvents) : [];
                 const hasEvents = eventsForDay.length > 0;
                 const dayIsToday = day && isToday(day);
-                const dayIsSelected = day && selectedDay && day.toDateString() === selectedDay.toDateString();
-                const eventColors = eventsForDay.slice(0, 3).map(e => getEventColor(e.title).primary);
+                const dayIsSelected =
+                  day && selectedDay && day.toDateString() === selectedDay.toDateString();
+                const eventColors = eventsForDay
+                  .slice(0, 3)
+                  .map((e) => getEventColor(e.title).primary);
 
                 return (
                   <button
@@ -632,7 +695,10 @@ END:VCALENDAR`;
                         setSelectedDay(day);
                         // Scroll automático a la lista de eventos
                         setTimeout(() => {
-                          eventsListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          eventsListRef.current?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'nearest',
+                          });
                         }, 100);
                       }
                     }}
@@ -645,10 +711,10 @@ END:VCALENDAR`;
                             dayIsToday
                               ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg shadow-blue-500/40'
                               : dayIsSelected
-                              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-2 ring-blue-600 dark:ring-blue-400'
-                              : hasEvents
-                              ? 'bg-slate-100 dark:bg-slate-700/60 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
-                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-2 ring-blue-600 dark:ring-blue-400'
+                                : hasEvents
+                                  ? 'bg-slate-100 dark:bg-slate-700/60 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           }`}
                         >
                           {day.getDate()}
@@ -661,7 +727,7 @@ END:VCALENDAR`;
                                 className="w-1 h-1 rounded-full shadow-sm"
                                 style={{
                                   backgroundColor: color,
-                                  boxShadow: `0 0 4px ${color}40`
+                                  boxShadow: `0 0 4px ${color}40`,
                                 }}
                               />
                             ))}
@@ -675,7 +741,10 @@ END:VCALENDAR`;
             </div>
 
             {/* Lista de eventos del día seleccionado */}
-            <div ref={eventsListRef} className="pt-5 border-t border-slate-200/60 dark:border-slate-700/40">
+            <div
+              ref={eventsListRef}
+              className="pt-5 border-t border-slate-200/60 dark:border-slate-700/40"
+            >
               <h3 className="text-[15px] font-bold text-slate-900 dark:text-white mb-3 tracking-wide">
                 {selectedDay
                   ? `Eventos del ${selectedDay.getDate()} de ${dayjs(selectedDay).format('MMMM')}`
@@ -702,11 +771,13 @@ END:VCALENDAR`;
                         style={{
                           backgroundColor: `${colors.light}E6`,
                           borderLeftColor: colors.primary,
-                          backdropFilter: 'blur(10px)'
+                          backdropFilter: 'blur(10px)',
                         }}
                       >
                         <div className="flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">{event.title}</p>
+                          <p className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">
+                            {event.title}
+                          </p>
                           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 tracking-tight">
                             {!event.allDay ? formatTime(event.start) : 'Todo el día'}
                             {event.location && ` • ${event.location}`}
@@ -752,7 +823,10 @@ END:VCALENDAR`;
 
             {/* Contenido con Liquid Glass cards */}
             <div className="space-y-4 mb-6">
-              <div className="flex gap-4 items-start bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-[18px] rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm" style={{ backdropFilter: 'blur(20px)' }}>
+              <div
+                className="flex gap-4 items-start bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-[18px] rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm"
+                style={{ backdropFilter: 'blur(20px)' }}
+              >
                 <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
                   <Clock className="w-[22px] h-[22px] text-white" strokeWidth={2.5} />
                 </div>
@@ -765,13 +839,18 @@ END:VCALENDAR`;
                       {formatTime(selectedEvent.start)} - {formatTime(selectedEvent.end)}
                     </p>
                   ) : (
-                    <p className="text-[15px] text-slate-600 dark:text-slate-400 tracking-tight">Todo el día</p>
+                    <p className="text-[15px] text-slate-600 dark:text-slate-400 tracking-tight">
+                      Todo el día
+                    </p>
                   )}
                 </div>
               </div>
 
               {selectedEvent.location && (
-                <div className="flex gap-4 items-start bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-[18px] rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm" style={{ backdropFilter: 'blur(20px)' }}>
+                <div
+                  className="flex gap-4 items-start bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-[18px] rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm"
+                  style={{ backdropFilter: 'blur(20px)' }}
+                >
                   <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
                     <MapPin className="w-[22px] h-[22px] text-white" strokeWidth={2.5} />
                   </div>
@@ -782,7 +861,10 @@ END:VCALENDAR`;
               )}
 
               {selectedEvent.description && (
-                <div className="bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-5 rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm" style={{ backdropFilter: 'blur(20px)' }}>
+                <div
+                  className="bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-5 rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm"
+                  style={{ backdropFilter: 'blur(20px)' }}
+                >
                   <p className="text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight">
                     {selectedEvent.description}
                   </p>
@@ -830,8 +912,18 @@ END:VCALENDAR`;
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
           <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
             <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-3 h-3 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <span className="font-semibold text-sm">Evento copiado al portapapeles</span>

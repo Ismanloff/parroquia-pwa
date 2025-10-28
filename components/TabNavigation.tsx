@@ -6,10 +6,30 @@ import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
 
 const tabs = [
-  { id: 'home' as TabType, label: 'Inicio', icon: Home, ariaLabel: 'Inicio - Ver evangelio y santo del día' },
-  { id: 'calendar' as TabType, label: 'Calendario', icon: Calendar, ariaLabel: 'Calendario - Ver eventos parroquiales' },
-  { id: 'chat' as TabType, label: 'Chat', icon: MessageCircle, ariaLabel: 'Chat - Preguntar al asistente parroquial' },
-  { id: 'settings' as TabType, label: 'Ajustes', icon: Settings, ariaLabel: 'Ajustes - Configurar la aplicación' },
+  {
+    id: 'home' as TabType,
+    label: 'Inicio',
+    icon: Home,
+    ariaLabel: 'Inicio - Ver evangelio y santo del día',
+  },
+  {
+    id: 'calendar' as TabType,
+    label: 'Calendario',
+    icon: Calendar,
+    ariaLabel: 'Calendario - Ver eventos parroquiales',
+  },
+  {
+    id: 'chat' as TabType,
+    label: 'Chat',
+    icon: MessageCircle,
+    ariaLabel: 'Chat - Preguntar al asistente parroquial',
+  },
+  {
+    id: 'settings' as TabType,
+    label: 'Ajustes',
+    icon: Settings,
+    ariaLabel: 'Ajustes - Configurar la aplicación',
+  },
 ];
 
 export function TabNavigation() {
@@ -19,8 +39,9 @@ export function TabNavigation() {
     <nav
       role="navigation"
       aria-label="Navegación principal"
-      className="fixed bottom-5 left-4 right-4 z-50"
+      className="fixed left-4 right-4 z-50"
       style={{
+        bottom: 'max(1.25rem, env(safe-area-inset-bottom, 1.25rem))',
         maxWidth: 'calc(100vw - 2rem)',
         marginLeft: 'auto',
         marginRight: 'auto',
@@ -68,10 +89,7 @@ export function TabNavigation() {
                 )}
               >
                 <Icon
-                  className={cn(
-                    'transition-all duration-300',
-                    isActive ? 'w-7 h-7' : 'w-6 h-6'
-                  )}
+                  className={cn('transition-all duration-300', isActive ? 'w-7 h-7' : 'w-6 h-6')}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span
