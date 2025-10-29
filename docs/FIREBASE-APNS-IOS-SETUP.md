@@ -77,7 +77,7 @@ Salta a **Parte 2**
 1. En el menú lateral, click en "Keys"
 2. Click en botón "+" (agregar nueva key)
 3. Llenar:
-   - **Key Name**: "Firebase Push Notifications"
+   - **Key Name**: "t"
 4. Marcar:
    - ✅ **Apple Push Notifications service (APNs)**
 5. Click "Continue"
