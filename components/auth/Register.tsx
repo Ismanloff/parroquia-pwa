@@ -9,7 +9,7 @@ interface RegisterProps {
 }
 
 export function Register({ onSwitchToLogin }: RegisterProps) {
-  const { signUp, error, loading, clearError } = useAuth();
+  const { clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -17,6 +17,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +36,33 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
     }
 
     try {
-      await signUp(email, password, fullName, phone);
+      setLoading(true);
+
+      // Usar la API route que confirma automáticamente el email
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al registrar usuario');
+      }
+
       setSuccess(true);
-    } catch (err) {
-      // Error is handled by AuthContext
+    } catch (err: any) {
+      setLocalError(err.message || 'Error al registrar usuario');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,9 +78,7 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
               ¡Cuenta creada!
             </h2>
             <p className="text-slate-600 dark:text-slate-400 mb-6">
-              {error
-                ? error
-                : 'Tu cuenta ha sido creada exitosamente. Revisa tu email para confirmar tu cuenta.'}
+              Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión.
             </p>
             <button
               onClick={onSwitchToLogin}
@@ -86,11 +108,9 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-lg space-y-4">
             {/* Error Message */}
-            {(error || localError) && (
+            {localError && (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-sm text-red-600 dark:text-red-400 text-center">
-                  {error || localError}
-                </p>
+                <p className="text-sm text-red-600 dark:text-red-400 text-center">{localError}</p>
               </div>
             )}
 
