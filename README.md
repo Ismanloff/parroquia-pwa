@@ -1,138 +1,145 @@
-# Parroquia PWA
+# Resply
 
-Progressive Web App (PWA) para gestión parroquial con AI chatbot integrado.
+Multi-tenant B2B SaaS platform with AI-powered customer support assistant.
 
 ## Stack Tecnológico
 
-- **Next.js 16.0.0** con Turbopack
-- **React 19.2.0** con React Compiler
-- **TypeScript** con strict mode
-- **Tailwind CSS** con diseño iOS 26 Liquid Glass Lite
-- **OpenAI Agents SDK** para chatbot inteligente
-- **Pinecone** para búsqueda vectorial en documentos
-- **Anthropic Claude** para query expansion
-- **Supabase** para autenticación
-- **PWA** con soporte offline
+- **Next.js 16.0.0** with Turbopack
+- **React 19.2.0** with React Compiler
+- **TypeScript** with strict mode
+- **Tailwind CSS** with modern design system
+- **OpenAI Agents SDK** for intelligent chatbot
+- **Pinecone** for multi-tenant vector search (RAG)
+- **Voyage AI** for embeddings (1024 dims)
+- **Anthropic Claude** for query expansion and conversational rewriting
+- **Supabase** for authentication and multi-tenant data
+- **Redis Cloud** for semantic caching
+- **Resend** for transactional emails
 
-## Características
+## Features
 
-✅ **AI Chatbot** - Asistente parroquial con búsqueda RAG en documentos
-✅ **Calendario** - Eventos parroquiales sincronizados con Google Calendar
-✅ **Autenticación** - Login/Registro con Supabase
-✅ **PWA** - Instalable como app nativa (iOS/Android)
-✅ **Offline** - Funciona sin conexión
-✅ **Push Notifications** - Notificaciones de eventos
-✅ **iOS Design** - Liquid Glass design con efectos visuales avanzados
+✅ **AI Chatbot** - Customer support assistant with RAG-powered document search
+✅ **Calendar** - Event management with Google Calendar sync
+✅ **Multi-tenant** - Workspace-based isolation (Supabase + Pinecone namespaces)
+✅ **Authentication** - Secure login/register with Supabase
+✅ **Document Search** - AI-powered search across uploaded resources
+✅ **Semantic Cache** - Redis-based intelligent response caching
+✅ **Quick Actions** - Context-aware button suggestions
+✅ **Modern UI** - Responsive design with dark mode support
 
-## Instalación Local
+## Local Installation
 
-### Prerrequisitos
+### Prerequisites
 
 - Node.js 18+
-- npm o yarn
-- Cuentas en: OpenAI, Pinecone, Anthropic, Supabase, Resend
+- npm or yarn
+- Accounts in: OpenAI, Pinecone, Anthropic, Supabase, Resend, Redis Cloud, Voyage AI
 
 ### Setup
 
-1. **Clonar el repositorio**
+1. **Clone repository**
 
 ```bash
 git clone <repo-url>
-cd "APP PARRO PWA"
+cd resply
 ```
 
-2. **Instalar dependencias**
+2. **Install dependencies**
 
 ```bash
 npm install
 ```
 
-3. **Configurar variables de entorno**
+3. **Configure environment variables**
 
-Crea un archivo `.env.local` con las siguientes variables:
+Create a `.env.local` file with the following variables:
 
 ```bash
 # OpenAI API Key
-OPENAI_API_KEY=tu_openai_api_key
+OPENAI_API_KEY=your_openai_api_key
 
-# ChatKit Workflow ID (opcional si usas OpenAI Agents SDK)
+# ChatKit Workflow ID (optional if using OpenAI Agents SDK)
 CHATKIT_WORKFLOW_ID=wf_...
 
-# Configuración del Agente
-AGENT_NAME=Asistente Parroquial
+# Agent Configuration
+AGENT_NAME=Resply Assistant
 OPENAI_AGENT_MODEL=gpt-4o-mini
 OPENAI_VECTOR_STORE_ID=vs_...
 
-# Instrucciones del agente
-AGENT_INSTRUCTIONS="Eres un chatbot parroquial..."
+# Agent instructions
+AGENT_INSTRUCTIONS="You are a business assistant that helps with customer support..."
 
 # Google Calendar ICS URL
 GOOGLE_CALENDAR_ICS_URL=https://calendar.google.com/calendar/ical/...
 
-# Supabase (autenticación)
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_ANON_KEY=tu_anon_key
-SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+# Supabase (authentication + multi-tenant data)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Variables públicas para el cliente
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
+# Resend (transactional emails)
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM_EMAIL=Resply <noreply@resply.com>
 
-# Resend (emails de autenticación)
-RESEND_API_KEY=tu_resend_api_key
-RESEND_FROM_EMAIL=Parroquia <noreply@tudominio.com>
+# Pinecone (multi-tenant vector search)
+# Index: saas | Embeddings: voyage-3-large (1024 dims)
+# Namespace pattern: ws_{workspace_id}
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_INDEX_NAME=saas
+PINECONE_NAMESPACE=saas
 
-# Pinecone (búsqueda vectorial)
-PINECONE_API_KEY=tu_pinecone_api_key
+# Voyage AI (embeddings provider)
+VOYAGE_API_KEY=your_voyage_api_key
 
-# Anthropic (Query Expansion con Claude)
-ANTHROPIC_API_KEY=tu_anthropic_api_key
+# Anthropic (Query Expansion with Claude)
+ANTHROPIC_API_KEY=your_anthropic_api_key
 
-# Redis (opcional - para caching)
-REDIS_URL=tu_redis_url
+# Redis Cloud (semantic caching)
+REDIS_URL=your_redis_url
 ```
 
-4. **Ejecutar en desarrollo**
+4. **Run in development**
 
 ```bash
 npm run dev
 ```
 
-La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
+Application will be available at [http://localhost:3000](http://localhost:3000)
 
-## Scripts Disponibles
+## Available Scripts
 
 ```bash
-npm run dev          # Desarrollo con Turbopack
-npm run build        # Build de producción
-npm run start        # Servidor de producción
-npm run lint         # Linter ESLint
-npm run lint:fix     # Fix automático de errores
-npm run type-check   # Verificación de tipos TypeScript
-npm test             # Tests con Vitest
+npm run dev          # Development with Turbopack
+npm run build        # Production build
+npm run start        # Production server
+npm run lint         # ESLint linter
+npm run lint:fix     # Auto-fix linting errors
+npm run type-check   # TypeScript type checking
+npm test             # Tests with Vitest
+npm run analyze      # Bundle analyzer
 ```
 
-## Deployment en Vercel
+## Deployment on Vercel
 
-### 1. Preparación
+### 1. Preparation
 
-Asegúrate de que el build local funciona correctamente:
+Ensure local build works correctly:
 
 ```bash
 npm run build
 ```
 
-### 2. Deploy en Vercel
+### 2. Deploy to Vercel
 
-#### Opción A: Desde GitHub
+#### Option A: From GitHub
 
-1. Sube tu código a GitHub
-2. Ve a [vercel.com](https://vercel.com)
-3. Importa tu repositorio
-4. Configura las variables de entorno (ver sección siguiente)
-5. Deploy automático
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com)
+3. Import your repository
+4. Configure environment variables (see next section)
+5. Automatic deployment
 
-#### Opción B: CLI de Vercel
+#### Option B: Vercel CLI
 
 ```bash
 npm i -g vercel
@@ -140,103 +147,107 @@ vercel login
 vercel --prod
 ```
 
-### 3. Configurar Variables de Entorno en Vercel
+### 3. Configure Environment Variables in Vercel
 
-En el dashboard de Vercel > Settings > Environment Variables, añade todas las variables de `.env.local`:
+In Vercel dashboard > Settings > Environment Variables, add all variables from `.env.local`:
 
-**Variables requeridas:**
+**Required variables:**
 - `OPENAI_API_KEY`
 - `OPENAI_VECTOR_STORE_ID`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `PINECONE_API_KEY`
+- `PINECONE_INDEX_NAME`
+- `PINECONE_NAMESPACE`
+- `VOYAGE_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `GOOGLE_CALENDAR_ICS_URL`
-
-**Variables opcionales:**
-- `CHATKIT_WORKFLOW_ID`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
+
+**Optional variables:**
+- `CHATKIT_WORKFLOW_ID`
 - `REDIS_URL`
 - `AGENT_NAME`
 - `OPENAI_AGENT_MODEL`
 - `AGENT_INSTRUCTIONS`
 
-### 4. Verificar Deployment
+### 4. Verify Deployment
 
-Una vez desplegado:
+Once deployed:
 
-1. Prueba el chatbot AI
-2. Verifica el calendario de eventos
-3. Prueba autenticación (login/registro)
-4. Instala la PWA en tu dispositivo
-5. Verifica funcionamiento offline
+1. Test AI chatbot
+2. Verify calendar events
+3. Test authentication (login/register)
+4. Test document upload and RAG search
+5. Verify semantic caching is working
 
-## Arquitectura
+## Architecture
 
 ```
 app/
-├── (tabs)/                  # Tabs principales (Home, Calendar, Chat, Profile)
+├── (tabs)/                  # Main tabs (Home, Calendar, Chat, Profile)
 ├── api/                     # API Routes
-│   ├── chat/               # Endpoints del chatbot
-│   │   ├── message/        # Chat con OpenAI Agents
-│   │   ├── message-stream/ # Streaming de respuestas
-│   │   └── tools/          # Tools para el agente (Pinecone, Calendar)
-│   ├── calendar/           # Eventos del calendario
-│   ├── auth/               # Autenticación Supabase
-│   └── admin/              # Endpoints administrativos
-├── auth/                    # Páginas de auth (login, register)
-components/                  # Componentes React
-lib/                         # Utilidades y configuración
-├── supabase.ts             # Cliente Supabase
-├── dayjs.ts                # Configuración dayjs
-├── haptics.ts              # Feedback háptico
-└── toast.ts                # Sistema de notificaciones
-public/                      # Assets estáticos
-└── manifest.json           # PWA manifest
+│   ├── chat/               # Chatbot endpoints
+│   │   ├── message/        # Chat with OpenAI Agents
+│   │   ├── message-stream/ # Response streaming
+│   │   ├── tools/          # Agent tools (Pinecone, Calendar)
+│   │   ├── data/           # Resources & knowledge base
+│   │   └── utils/          # Cache, query expansion, quick actions
+│   ├── calendar/           # Calendar events
+│   ├── auth/               # Supabase authentication
+│   └── workspaces/         # Multi-tenant workspace management
+├── auth/                    # Auth pages (login, register)
+components/                  # React components
+├── landing/                # Landing page components
+└── ui/                     # Reusable UI components
+lib/                         # Utilities and configuration
+├── supabase.ts             # Supabase client
+├── pinecone.ts             # Pinecone vector store
+└── voyage.ts               # Voyage AI embeddings
 ```
 
-## Optimizaciones Implementadas
+## Optimizations Implemented
 
 ### Performance
-- ✅ React 19 Compiler para optimización automática
-- ✅ Turbopack para builds ultra-rápidos
-- ✅ ISR (Incremental Static Regeneration) para páginas estáticas
-- ✅ Code splitting automático
-- ✅ Image optimization con next/image
+- ✅ React 19 Compiler for automatic optimization
+- ✅ Turbopack for ultra-fast builds
+- ✅ ISR (Incremental Static Regeneration) for static pages
+- ✅ Automatic code splitting
+- ✅ Image optimization with next/image
+- ✅ Semantic caching with Redis (reduces API calls by 60%)
 
 ### SEO
-- ✅ Metadata dinámica en cada página
-- ✅ Sitemap y robots.txt
+- ✅ Dynamic metadata on each page
+- ✅ Sitemap and robots.txt
 - ✅ Open Graph tags
 - ✅ Structured data
 
-### PWA
-- ✅ Service Worker para offline support
-- ✅ App Manifest configurado
-- ✅ Installable prompt
-- ✅ Push notifications ready
-
 ### UX
-- ✅ Pull-to-refresh en móvil
-- ✅ Haptic feedback (iOS)
+- ✅ Dark mode support
 - ✅ Toast notifications
-- ✅ Loading states elegantes
+- ✅ Elegant loading states
 - ✅ Error boundaries
+- ✅ Quick action buttons (context-aware)
+- ✅ Responsive mobile-first design
+
+### Multi-tenancy
+- ✅ Workspace-based isolation
+- ✅ Pinecone namespaces per workspace (ws_{workspace_id})
+- ✅ Supabase RLS policies for data security
+- ✅ Separate vector stores per tenant
 
 ## Testing
 
 ```bash
-# Ejecutar tests
+# Run tests
 npm test
 
-# Tests en modo watch
+# Tests in watch mode
 npm test -- --watch
 
-# Tests con coverage
+# Tests with coverage
 npm test -- --coverage
 ```
 
@@ -244,54 +255,56 @@ npm test -- --coverage
 
 ### Build Errors
 
-Si el build falla en Vercel, verifica:
+If build fails on Vercel, verify:
 
-1. Todas las variables de entorno están configuradas
-2. Las API keys son válidas
-3. Los modelos de OpenAI existen y tienes acceso
-4. El índice de Pinecone existe
+1. All environment variables are configured
+2. API keys are valid
+3. OpenAI models exist and you have access
+4. Pinecone index exists with correct dimensions (1024)
+5. Voyage AI API key is valid
 
-### PWA No Instala
+### Chatbot Not Responding
 
-- Verifica que estés usando HTTPS
-- Comprueba que `manifest.json` es accesible
-- Revisa la consola del navegador para errores del Service Worker
+1. Verify `OPENAI_API_KEY` in environment variables
+2. Check that `OPENAI_VECTOR_STORE_ID` is correct
+3. Review logs in Vercel Dashboard
+4. Verify OpenAI rate limits
+5. Check Pinecone index status
 
-### Chatbot No Responde
+### Semantic Cache Not Working
 
-1. Verifica `OPENAI_API_KEY` en variables de entorno
-2. Comprueba que `OPENAI_VECTOR_STORE_ID` es correcto
-3. Revisa logs en Vercel Dashboard
-4. Verifica límites de rate de OpenAI
+1. Verify `REDIS_URL` is configured
+2. Check Redis Cloud connection status
+3. Review semantic cache logs in API route
 
 ## Roadmap
 
-- [ ] Migración a React Native (70-80% código reusable)
-- [ ] Multi-idioma (i18n)
-- [ ] Dashboard administrativo avanzado
-- [ ] Analytics de uso del chatbot
-- [ ] Integración con sistemas parroquiales existentes
-- [ ] Donaciones online
-- [ ] Sistema de reservas para eventos
+- [ ] Admin dashboard for workspace management
+- [ ] Advanced analytics and usage tracking
+- [ ] Multi-language support (i18n)
+- [ ] Integration with CRM systems
+- [ ] Advanced document parsing (Excel, Word, PPT)
+- [ ] Voice assistant integration
+- [ ] Team collaboration features
 
-## Contribuir
+## Contributing
 
-Las contribuciones son bienvenidas. Por favor:
+Contributions are welcome. Please:
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+1. Fork the project
+2. Create a branch for your feature (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## Soporte
+## Support
 
-Para reportar bugs o solicitar features, abre un issue en GitHub.
+To report bugs or request features, open an issue on GitHub.
 
-## Licencia
+## License
 
 [MIT License](LICENSE)
 
 ---
 
-**Desarrollado con ❤️ para comunidades parroquiales**
+**Built with ❤️ for modern businesses**

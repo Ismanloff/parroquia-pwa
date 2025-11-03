@@ -2,11 +2,10 @@
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext", "webworker"],
-    "types": ["@serwist/next/typings"],
     "allowJs": true,
     "skipLibCheck": true,
 
-    // Strict Type-Checking Options - TypeScript Best Practices 2025
+    // Strict Type-Checking Options - Re-enabled with basic Supabase types
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -18,10 +17,10 @@
     "alwaysStrict": true,
 
     // Additional Checks
-    "noUnusedLocals": false, // Temporarily disabled for production build
-    "noUnusedParameters": false, // Temporarily disabled for production build
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": false, // Temporarily disabled for production build
+    "noImplicitReturns": true,
 
     // Module Options
     "noEmit": true,
@@ -52,6 +51,7 @@
   ],
   "exclude": [
     "node_modules",
+    "scripts",
     "vitest.setup.ts",
     "vitest.config.ts",
     "**/*.test.ts",

@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { InstallButton } from '@/components/install';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 
@@ -62,7 +61,6 @@ export function Settings() {
         // Mostrar notificación de prueba
         new Notification('Notificaciones activadas', {
           body: 'Recibirás recordatorios sobre eventos y contenido diario',
-          icon: '/icons/icon-192x192.png',
         });
       }
     }
@@ -201,11 +199,6 @@ export function Settings() {
           )}
         </div>
 
-        {/* Instalación de App */}
-        <div className="mb-6">
-          <InstallButton variant="settings" />
-        </div>
-
         {/* Notificaciones */}
         <div
           className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 mb-6"
@@ -278,7 +271,7 @@ export function Settings() {
                 </button>
               </div>
 
-              {/* Notificaciones de evangelio */}
+              {/* Notificaciones de actualizaciones */}
               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
@@ -286,10 +279,10 @@ export function Settings() {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                      Evangelio del día
+                      Actualizaciones diarias
                     </p>
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Notificación diaria a las 7:00 AM
+                      Notificación diaria a las 9:00 AM
                     </p>
                   </div>
                 </div>
@@ -307,7 +300,7 @@ export function Settings() {
                 </button>
               </div>
 
-              {/* Notificaciones de santo */}
+              {/* Notificaciones de tips */}
               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
@@ -315,10 +308,10 @@ export function Settings() {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                      Santo del día
+                      Tips y consejos
                     </p>
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Notificación diaria a las 7:00 AM
+                      Notificación diaria a las 10:00 AM
                     </p>
                   </div>
                 </div>
@@ -337,7 +330,7 @@ export function Settings() {
               </div>
             </div>
           )}
-        </div>
+          </div>
 
         {/* Información de la app */}
         <div
@@ -361,7 +354,7 @@ export function Settings() {
                 Plataforma
               </span>
               <span className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
-                Web PWA
+                Web
               </span>
             </div>
           </div>

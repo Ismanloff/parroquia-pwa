@@ -1,12 +1,16 @@
 /**
- * Pinecone Tool para búsqueda en documentos parroquiales
+ * Pinecone Tool para búsqueda multi-tenant en knowledge base de empresas
  *
  * Configuración:
- * - Índice: parroquias
- * - Dimensiones: 3072
- * - Modelo: text-embedding-3-large
- * - Región: us-east-1 (AWS)
- * - 71 documentos vectorizados con metadata rica (24 PDFs + 47 MD chunks)
+ * - Índice: saas (dinámico desde .env)
+ * - Dimensiones: 1024 (Voyage-3-Large)
+ * - Modelo embeddings: voyage-3-large
+ * - Región: us-east-1 (AWS Serverless)
+ * - Namespace pattern: saas_tenant_{id} (un namespace por workspace)
+ *
+ * Multi-Tenancy:
+ * - Cada tenant tiene su propio namespace aislado en Pinecone
+ * - Filtro adicional por tenant_id en metadata para seguridad
  *
  * Optimizaciones RAG 2025:
  * - Query Expansion: Genera 3 variaciones de cada query para mejor recall
@@ -16,8 +20,9 @@
 import { tool } from '@openai/agents';
 import { z } from 'zod';
 import { Pinecone } from '@pinecone-database/pinecone';
-import OpenAI from 'openai';
+import { VoyageAIClient } from 'voyageai';
 import Anthropic from '@anthropic-ai/sdk';
+import { getCurrentTenantId } from '@/lib/tenant-context';
 
 interface PineconeMatch {
   id: string;
@@ -30,16 +35,17 @@ const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!
 });
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
+const voyageai = new VoyageAIClient({
+  apiKey: process.env.VOYAGE_API_KEY!
 });
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!
 });
 
-// Conectar al índice "parroquias"
-const index = pc.index('parroquias');
+// Conectar al índice dinámico (desde .env)
+const indexName = process.env.PINECONE_INDEX_NAME || 'saas';
+const index = pc.index(indexName);
 
 /**
  * Expande una query en múltiples variaciones usando Claude Haiku 4.5
@@ -51,43 +57,43 @@ async function expandQuery(query: string): Promise<string[]> {
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 200,
       temperature: 0.1,
-      system: `Eres un experto en reformular preguntas sobre parroquias católicas.
+      system: `Eres un experto en reformular preguntas sobre productos, servicios y soporte al cliente.
 
 Genera 3 variaciones breves de la pregunta del usuario para mejorar búsquedas semánticas:
 
 TIPOS DE QUERY:
 
-A) Queries de 1-2 palabras clave (ej: "testigos bautismo", "documentos matrimonio"):
+A) Queries de 1-2 palabras clave (ej: "precios planes", "cancelar suscripción"):
    - Mantén las palabras clave EXACTAS en todas las variaciones
-   - Expande con contexto mínimo: "requisitos para", "información sobre", "qué necesito para"
+   - Expande con contexto mínimo: "cómo puedo", "información sobre", "qué necesito para"
    - NO cambies términos técnicos por sinónimos
 
-B) Nombres propios de grupos (ej: "Eloos", "Oro y Café"):
+B) Nombres propios de productos/servicios:
    - PRESERVA el nombre EXACTO en todas las variaciones
-   - Añade contexto: "grupo", "actividades", "horarios", "reuniones"
+   - Añade contexto: "características", "precio", "cómo funciona", "integración"
 
 REGLAS CRÍTICAS:
 - Máximo 12 palabras por variación
-- NO uses sinónimos para términos sacramentales: "testigos" NO es "padrinos"
+- NO uses sinónimos para términos técnicos
 - Mantén lenguaje simple y directo
-- Si la query menciona documentos/requisitos/testigos, úsalos tal cual
+- Si la query menciona precios/planes/documentos, úsalos tal cual
 
 Ejemplos:
 
-"testigos bautismo" →
-requisitos testigos bautismo
-información testigos para bautismo
-quiénes pueden ser testigos bautismo
+"precios planes" →
+cuáles son los precios de los planes
+información sobre precios y planes
+cuánto cuesta cada plan
 
-"documentos matrimonio" →
-qué documentos necesito para matrimonio
-requisitos documentos expediente matrimonial
-documentación necesaria matrimonio
+"cancelar suscripción" →
+cómo cancelar mi suscripción
+pasos para cancelar suscripción
+política de cancelación suscripción
 
-"oro y café" →
-grupo Oro y Café actividades
-información Oro y Café horarios
-encuentro parejas Oro y Café
+"integraciones disponibles" →
+qué integraciones están disponibles
+lista de integraciones soportadas
+con qué aplicaciones se integra
 
 Responde SOLO con las 3 variaciones, una por línea, sin numeración.`,
       messages: [
@@ -143,47 +149,55 @@ function reciprocalRankFusion(resultSets: PineconeMatch[][], k: number = 60): Pi
 
 // Schema para los parámetros del tool
 const PineconeToolInputSchema = z.object({
-  query: z.string().describe('Consulta del usuario sobre la parroquia. Debe ser descriptiva y clara.'),
+  query: z.string().describe('Consulta del usuario. Debe ser descriptiva y clara.'),
   categoria: z.enum([
-    'sacramentos',
-    'catequesis',
-    'liturgia',
-    'caritas',
-    'grupos_oracion',
-    'jovenes',
-    'familias',
-    'formacion',
-    'comunidad_china',
-    'informacion_general'
-  ]).nullable().default(null).describe('Categoría pastoral para filtrar resultados (opcional). Úsala si el usuario pregunta por un tema específico.')
+    'productos',
+    'servicios',
+    'precios',
+    'soporte',
+    'integraciones',
+    'politicas',
+    'facturacion',
+    'cuenta',
+    'seguridad',
+    'general'
+  ]).nullable().default(null).describe('Categoría para filtrar resultados (opcional). Úsala si el usuario pregunta por un tema específico.')
 });
 
 /**
- * Herramienta de búsqueda en Pinecone para documentos parroquiales
- * Soporta filtrado por categoría pastoral y metadata enriquecida
+ * Herramienta de búsqueda multi-tenant en knowledge base empresarial
+ * Soporta filtrado por categoría y aislamiento por tenant
  */
 export const pineconeTool = tool({
   name: 'search_parish_info',
-  description: `Busca información en documentos oficiales de la parroquia (PDFs, guías, boletines).
+  description: `Busca información en la base de conocimiento de la empresa (documentos, guías, políticas, FAQ).
 
 Usa esta herramienta para:
-- Información sobre sacramentos (bautismo, confirmación, matrimonio, etc.)
-- Actividades y grupos parroquiales (catequesis, Eloos, Cáritas, grupos de oración)
-- Horarios de actividades regulares
-- Normativas y procedimientos parroquiales
-- Historia y contexto de la parroquia
-- Información sobre comunidades religiosas
+- Información sobre productos y servicios
+- Precios, planes y facturación
+- Políticas de uso, reembolso y privacidad
+- Soporte técnico y troubleshooting
+- Integraciones disponibles
+- Guías de usuario y procedimientos
 
 NO uses esta herramienta para:
 - Eventos con fechas específicas (usa get_calendar_events)
-- Formularios de inscripción (usa get_resources)`,
+- Formularios de registro (usa get_resources)`,
 
   parameters: PineconeToolInputSchema,
 
   execute: async ({ query, categoria }) => {
     try {
-      console.log(`🔍 [Pinecone] Buscando: "${query}"${categoria ? ` | Categoría: ${categoria}` : ''}`);
+      // Obtener tenant_id del contexto global
+      const resolvedTenantId = getCurrentTenantId();
+
+      console.log(`🔍 [Pinecone] Buscando: "${query}" | Tenant: ${resolvedTenantId}${categoria ? ` | Categoría: ${categoria}` : ''}`);
       const startTime = Date.now();
+
+      // Construir namespace dinámico por tenant
+      const baseNamespace = process.env.PINECONE_NAMESPACE || 'saas';
+      const namespace = `${baseNamespace}_${resolvedTenantId}`;
+      console.log(`🏢 [Multi-Tenant] Namespace: ${namespace}`);
 
       // 🎯 OPTIMIZACIÓN CONDICIONAL: Detectar si la query necesita expansion
       // Queries largas (>= 30 chars) y bien formuladas NO necesitan expansion
@@ -203,31 +217,35 @@ NO uses esta herramienta para:
         console.log(`⚡ [Query Expansion] SKIP - Query suficientemente específica (${queryLength} chars)`);
       }
 
-      // 2. Construir filtro de metadata (si se especifica categoría)
-      const filter: any = {};
+      // 2. Construir filtro de metadata (categoría + tenant_id para seguridad)
+      const filter: any = {
+        tenant_id: resolvedTenantId  // Filtro de seguridad obligatorio
+      };
       if (categoria) {
-        filter.categoria_pastoral = categoria;
+        filter.categoria = categoria;
       }
 
-      // 3. Generar embeddings de todas las queries EN PARALELO
+      // 3. Generar embeddings de todas las queries EN PARALELO con Voyage AI
       const embeddingPromises = expandedQueries.map(q =>
-        openai.embeddings.create({
-          model: 'text-embedding-3-large',
-          input: q,
-          dimensions: 3072
+        voyageai.embed({
+          input: [q],  // Voyage AI SDK usa 'input', no 'texts'
+          model: 'voyage-3-large',
+          inputType: 'query',
+          outputDimension: 1024  // Voyage-3-Large default
         })
       );
 
       const embeddingResponses = await Promise.all(embeddingPromises);
-      console.log(`✅ [Embeddings] ${embeddingResponses.length} embeddings generados`);
+      console.log(`✅ [Embeddings] ${embeddingResponses.length} embeddings generados con Voyage AI`);
 
-      // 4. Buscar en Pinecone con cada embedding EN PARALELO
+      // 4. Buscar en Pinecone con cada embedding EN PARALELO (usando namespace)
+      // Voyage AI retorna result.data[].embedding, no result.embeddings
       const searchPromises = embeddingResponses.map(embeddingResponse =>
-        index.query({
-          vector: embeddingResponse.data[0]?.embedding || [],
+        index.namespace(namespace).query({
+          vector: embeddingResponse.data?.[0]?.embedding || [],
           topK: 5, // Aumentado porque luego fusionamos
           includeMetadata: true,
-          filter: Object.keys(filter).length > 0 ? filter : undefined
+          filter: filter  // Siempre incluye tenant_id
         })
       );
 
@@ -256,13 +274,14 @@ NO uses esta herramienta para:
         console.log(`🔄 [Pinecone] FALLBACK - Sin resultados con filtro. Intentando sin filtro de categoría...`);
         console.log(`🔍 [DEBUG] Filtro que bloqueó resultados:`, filter);
 
-        // Buscar de nuevo SIN filtro
+        // Buscar de nuevo SIN filtro de categoría pero SIEMPRE con tenant_id
+        const fallbackFilter = { tenant_id: resolvedTenantId };
         const fallbackSearchPromises = embeddingResponses.map(embeddingResponse =>
-          index.query({
-            vector: embeddingResponse.data[0]?.embedding || [],
+          index.namespace(namespace).query({
+            vector: embeddingResponse.data?.[0]?.embedding || [],
             topK: 5,
-            includeMetadata: true
-            // Sin filtro
+            includeMetadata: true,
+            filter: fallbackFilter  // Mantiene tenant_id por seguridad
           })
         );
 
@@ -283,9 +302,9 @@ NO uses esta herramienta para:
 
       // 7. Validar resultados finales
       if (fusedResults.length === 0) {
-        console.log(`❌ [Pinecone] Sin resultados para: "${query}"`);
-        console.log(`🔍 [DEBUG] Intentó con filtro:`, Object.keys(filter).length > 0 ? filter : 'ninguno');
-        return 'No se encontró información específica sobre este tema en los documentos parroquiales. Consulta directamente con la recepción de la parroquia.';
+        console.log(`❌ [Pinecone] Sin resultados para: "${query}" en tenant ${resolvedTenantId}`);
+        console.log(`🔍 [DEBUG] Namespace: ${namespace} | Filtro:`, filter);
+        return 'No se encontró información específica sobre este tema en la base de conocimiento. Contacta con el equipo de soporte para más ayuda.';
       }
 
       // 8. Tomar los top 3 resultados después de fusion
@@ -313,10 +332,10 @@ NO uses esta herramienta para:
       }
 
       if (error.message?.includes('index')) {
-        return 'Error: No se pudo conectar al índice de documentos parroquiales.';
+        return 'Error: No se pudo conectar al índice de conocimiento.';
       }
 
-      return `Error al buscar información: ${error.message}. Por favor, intenta de nuevo o consulta directamente con la parroquia.`;
+      return `Error al buscar información: ${error.message}. Por favor, intenta de nuevo o contacta con soporte.`;
     }
   },
 });

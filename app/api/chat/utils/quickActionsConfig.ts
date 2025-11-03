@@ -75,151 +75,59 @@ const DYNAMIC_BUTTONS = {
 // ============================================================================
 
 export const TOPIC_MAPPINGS: TopicConfig[] = [
-  // ========== GRUPOS JUVENILES ==========
+  // ========== SERVICIOS/PRODUCTOS ==========
   {
     keywords: [
-      'eloos',
-      'elos',
-      'grupo de jóvenes',
-      'grupo jovenes',
-      'entrega',
-      'superación',
-      'superacion',
-      'eloos entrega',
-      'eloos superación',
-    ],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: ['edge', 'adolescentes', 'middle school'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: ['lifeteen', 'life teen', 'high school'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: ['mies', 'jovenes mies'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: ['el pozo', 'pozo'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: ['bartimeo', 'bartolomé'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-
-  // ========== GRUPOS ADULTOS ==========
-  {
-    keywords: ['dalmanuta'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: ['oro y café', 'oro y cafe', 'oro cafe'],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-  {
-    keywords: [
-      'oración de las madres',
-      'oracion de las madres',
-      'oración madres',
-      'oracion madres',
+      'producto',
+      'servicio',
+      'plan',
+      'planes',
+      'suscripción',
+      'suscripcion',
     ],
     category: 'groups',
     dynamicButton: DYNAMIC_BUTTONS.groups,
   },
 
-  // ========== CATEQUESIS ==========
+  // ========== SOPORTE/DOCUMENTACIÓN ==========
   {
     keywords: [
-      'catequesis',
-      'catecismo',
-      'primera comunión',
-      'primera comunion',
-      'catequesis de infancia',
-      'catequesis infancia',
-      'catecumenado',
-      'catecumenado adultos',
+      'documentación',
+      'documentacion',
+      'guía',
+      'guia',
+      'tutorial',
+      'manual',
     ],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-
-  // ========== TALLERES ==========
-  {
-    keywords: [
-      'taller solidario',
-      'taller san juan',
-      'taller san juan evangelista',
-    ],
-    category: 'groups',
-    dynamicButton: DYNAMIC_BUTTONS.groups,
-  },
-
-  // ========== SACRAMENTOS ==========
-  {
-    keywords: ['bautismo', 'bautizo', 'bautizar'],
-    category: 'sacraments',
-    dynamicButton: DYNAMIC_BUTTONS.sacraments,
-  },
-  {
-    keywords: ['matrimonio', 'boda', 'casarse', 'casamiento'],
-    category: 'sacraments',
-    dynamicButton: DYNAMIC_BUTTONS.sacraments,
-  },
-  {
-    keywords: ['confirmación', 'confirmacion', 'confirmar'],
     category: 'sacraments',
     dynamicButton: DYNAMIC_BUTTONS.sacraments,
   },
 
-  // ========== HORARIOS ==========
+  // ========== HORARIOS/EVENTOS ==========
   {
     keywords: [
-      'misa',
-      'misas',
-      'horario misa',
-      'horarios misas',
+      'horario',
+      'horarios',
+      'evento',
+      'eventos',
       'calendario',
-      'calendario parroquial',
+      'webinar',
     ],
     category: 'schedules',
     dynamicButton: DYNAMIC_BUTTONS.schedules,
   },
 
-  // ========== UBICACIONES/CONTACTO ==========
+  // ========== UBICACIÓN/CONTACTO ==========
   {
     keywords: [
-      'cáritas',
-      'caritas',
-      'donde esta caritas',
-      'donde está cáritas',
-      'ubicacion caritas',
-      'ubicación cáritas',
-    ],
-    category: 'location',
-    dynamicButton: DYNAMIC_BUTTONS.location,
-  },
-  {
-    keywords: [
-      'parroquia',
-      'transfiguración',
-      'transfiguracion',
-      'soledad',
+      'contacto',
       'donde esta',
       'donde está',
       'dirección',
       'direccion',
+      'ubicacion',
+      'ubicación',
+      'oficina',
     ],
     category: 'location',
     dynamicButton: DYNAMIC_BUTTONS.location,

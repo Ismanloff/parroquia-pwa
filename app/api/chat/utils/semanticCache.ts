@@ -4,7 +4,7 @@
  * Funcionalidad:
  * - Cachea respuestas basadas en similitud semántica de preguntas
  * - NO cachea preguntas relacionadas con calendario/fechas/eventos
- * - TTL de 1 hora para info general de la parroquia
+ * - TTL de 1 hora para info general
  * - Usa ioredis para conectar con Redis Cloud tradicional
  */
 
@@ -23,14 +23,14 @@ class SemanticCache {
   private readonly REDIS_PREFIX = 'semantic_cache:';
   private readonly INDEX_KEY = 'semantic_cache:index'; // Lista de todas las keys
 
-  // Palabras clave que indican pregunta relacionada con calendario (NO cachear)
+  // Palabras clave que indican pregunta relacionada con eventos/calendario (NO cachear)
   private readonly CALENDAR_KEYWORDS = [
     'evento', 'eventos', 'actividad', 'actividades',
     'hoy', 'mañana', 'próximo', 'proxima', 'próxima',
     'cuando', 'cuándo', 'fecha', 'fechas',
     'semana', 'mes', 'día', 'dia',
     'calendario', 'programado', 'programada',
-    'horario de misa', 'misas', 'misa de',
+    'horario', 'horarios',
     'qué hay', 'que hay'
   ];
 
@@ -237,14 +237,13 @@ class SemanticCache {
       return 60 * 60 * 24; // 24 horas
     }
 
-    // Info de grupos y comunidades → 7 días
-    const groupKeywords = [
-      'eloos', 'catequesis', 'grupo', 'comunidad',
-      'bartimeo', 'pozo', 'dalmanuta', 'mies',
-      'caritas', 'cáritas', 'voluntario', 'servicio'
+    // Info de servicios y recursos → 7 días
+    const serviceKeywords = [
+      'servicio', 'producto', 'recurso', 'documento',
+      'guía', 'manual', 'proceso', 'procedimiento'
     ];
 
-    if (groupKeywords.some(kw => lowerQuestion.includes(kw))) {
+    if (serviceKeywords.some(kw => lowerQuestion.includes(kw))) {
       return 60 * 60 * 24 * 7; // 7 días
     }
 

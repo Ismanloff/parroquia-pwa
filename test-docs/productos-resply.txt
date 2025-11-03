@@ -1,0 +1,80 @@
+Resply - Plataforma de Chatbots WhatsApp con IA
+
+Productos y Servicios:
+
+1. Chatbot WhatsApp con IA
+Resply ofrece chatbots inteligentes que se integran directamente con WhatsApp Business API. Nuestros chatbots utilizan IA avanzada para responder preguntas de clientes 24/7, automatizar ventas y brindar soporte técnico.
+
+2. Base de Conocimiento Personalizada
+Cada empresa puede cargar sus propios documentos, políticas, catálogos de productos y FAQs. El chatbot aprenderá de esta información y responderá con precisión a las consultas específicas de tu negocio.
+
+3. Multi-tenant Architecture
+Soporte completo para múltiples empresas en una sola plataforma. Cada cliente tiene su propio espacio aislado con seguridad garantizada. Los datos de un tenant nunca se mezclan con otros.
+
+Planes y Precios:
+
+Plan Starter - $29/mes
+- 1,000 conversaciones/mes
+- 1 workspace
+- WhatsApp Business API incluida
+- Base de conocimiento hasta 100 documentos
+- Soporte por email
+
+Plan Professional - $99/mes
+- 10,000 conversaciones/mes
+- 3 workspaces
+- WhatsApp Business API incluida
+- Base de conocimiento hasta 1,000 documentos
+- Soporte prioritario
+- Analytics avanzados
+
+Plan Enterprise - Precio personalizado
+- Conversaciones ilimitadas
+- Workspaces ilimitados
+- WhatsApp Business API incluida
+- Base de conocimiento ilimitada
+- Soporte 24/7 dedicado
+- Integraciones personalizadas
+- SLA garantizado
+
+Integraciones Disponibles:
+
+- WhatsApp Business API (Meta)
+- Stripe para pagos
+- Supabase para autenticación
+- Pinecone para búsqueda semántica
+- Voyage AI para embeddings
+- Webhook notifications
+
+Soporte Técnico:
+
+Email: soporte@resply.com
+WhatsApp: +1-555-RESPLY-1
+Horario: Lun-Vie 9am-6pm (Plan Starter/Professional)
+24/7 para Plan Enterprise
+
+Política de Reembolso:
+
+Ofrecemos reembolso completo dentro de los primeros 14 días si no estás satisfecho con el servicio. Sin preguntas, sin complicaciones.
+
+Cómo Empezar:
+
+1. Regístrate en resply.com
+2. Crea tu primer workspace
+3. Conecta tu número de WhatsApp Business
+4. Sube documentos de tu empresa
+5. ¡Listo! Tu chatbot estará activo en minutos
+
+Preguntas Frecuentes:
+
+¿Necesito conocimientos técnicos?
+No. Resply está diseñado para ser usado por cualquier persona. La configuración es guiada y no requiere programación.
+
+¿Puedo cancelar en cualquier momento?
+Sí. Puedes cancelar tu suscripción en cualquier momento desde el panel de control. No hay contratos a largo plazo.
+
+¿Los datos de mis clientes están seguros?
+Absolutamente. Utilizamos cifrado de extremo a extremo, arquitectura multi-tenant con aislamiento total, y cumplimos con GDPR y CCPA.
+
+¿Cuántos idiomas soporta?
+El chatbot puede conversar en más de 100 idiomas. La IA detecta automáticamente el idioma del cliente y responde en consecuencia.

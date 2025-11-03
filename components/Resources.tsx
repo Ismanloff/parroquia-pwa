@@ -4,20 +4,20 @@ import { BookOpen, FileText, ExternalLink } from 'lucide-react';
 
 const resources = [
   {
-    title: 'Solicitud de Bautismo',
-    description: 'Formulario para solicitar el sacramento del Bautismo',
+    title: 'Documentación API',
+    description: 'Guía completa de integración y uso de nuestra API',
     icon: FileText,
     link: '#',
   },
   {
-    title: 'Horarios de Misa',
-    description: 'Consulta los horarios de celebraciones',
+    title: 'Horarios de Atención',
+    description: 'Consulta los horarios de soporte al cliente',
     icon: FileText,
     link: '#',
   },
   {
-    title: 'Contacto Parroquial',
-    description: 'Información de contacto y ubicación',
+    title: 'Contacto Soporte',
+    description: 'Información de contacto y canales de ayuda',
     icon: FileText,
     link: '#',
   },

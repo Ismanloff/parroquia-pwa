@@ -126,7 +126,7 @@ const CalendarToolInputSchema = z.object({
 // Crear el tool de calendario usando la función helper tool()
 export const calendarTool = tool({
   name: "get_calendar_events",
-  description: "Obtiene eventos del calendario parroquial. USA SIEMPRE esta herramienta cuando el usuario pregunte por: fechas, días (hoy, mañana, fin de semana, lunes, martes...), eventos, actividades, misas, celebraciones. IMPORTANTE: 'week' incluye TODO de lunes a domingo, 'weekend' es solo sábado y domingo.",
+  description: "Obtiene eventos del calendario empresarial. USA SIEMPRE esta herramienta cuando el usuario pregunte por: fechas, días (hoy, mañana, fin de semana, lunes, martes...), eventos, actividades, reuniones, webinars. IMPORTANTE: 'week' incluye TODO de lunes a domingo, 'weekend' es solo sábado y domingo.",
   parameters: CalendarToolInputSchema,
   execute: async ({ timeframe, limit, startDate, endDate }) => {
     try {

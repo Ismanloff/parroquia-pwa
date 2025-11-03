@@ -18,8 +18,8 @@ export const passwordResetEmailTemplate = (params: PasswordResetEmailParams): { 
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">APP PARRO</h1>
-    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Tu guía espiritual</p>
+    <h1 style="color: white; margin: 0; font-size: 28px;">Resply</h1>
+    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Tu asistente de atención al cliente</p>
   </div>
 
   <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
@@ -47,7 +47,7 @@ export const passwordResetEmailTemplate = (params: PasswordResetEmailParams): { 
   </div>
 
   <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-    <p>© ${new Date().getFullYear()} APP PARRO. Todos los derechos reservados.</p>
+    <p>© ${new Date().getFullYear()} Resply. Todos los derechos reservados.</p>
   </div>
 </body>
 </html>
@@ -66,7 +66,7 @@ Este enlace expirará en 1 hora por razones de seguridad.
 Si no solicitaste este cambio, tu cuenta permanece segura.
 
 ---
-© ${new Date().getFullYear()} APP PARRO. Todos los derechos reservados.
+© ${new Date().getFullYear()} Resply. Todos los derechos reservados.
   `.trim();
 
   return { html, text };
@@ -86,18 +86,18 @@ export const welcomeEmailTemplate = (params: WelcomeEmailParams): { html: string
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenido a APP PARRO</title>
+  <title>Bienvenido a Resply</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">¡Bienvenido a APP PARRO!</h1>
-    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Tu guía espiritual diaria</p>
+    <h1 style="color: white; margin: 0; font-size: 28px;">¡Bienvenido a Resply!</h1>
+    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Tu asistente de atención al cliente</p>
   </div>
 
   <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
     <h2 style="color: #333; margin-top: 0;">¡Hola ${userName}!</h2>
 
-    <p>Gracias por unirte a nuestra comunidad. Estamos emocionados de acompañarte en tu camino espiritual.</p>
+    <p>Gracias por unirte a nuestra plataforma. Estamos emocionados de ayudarte a mejorar tu atención al cliente con IA.</p>
 
     <p>Para activar tu cuenta y comenzar a disfrutar de todas las funcionalidades, por favor confirma tu correo electrónico:</p>
 
@@ -107,12 +107,12 @@ export const welcomeEmailTemplate = (params: WelcomeEmailParams): { html: string
       </a>
     </div>
 
-    <h3 style="color: #333; margin-top: 30px;">¿Qué puedes hacer con APP PARRO?</h3>
+    <h3 style="color: #333; margin-top: 30px;">¿Qué puedes hacer con Resply?</h3>
     <ul style="color: #666; line-height: 1.8;">
-      <li>📖 Lee el evangelio y conoce al santo del día</li>
-      <li>📅 Consulta los eventos y actividades de la parroquia</li>
-      <li>💬 Chatea con nuestro asistente de IA para resolver dudas</li>
-      <li>🔔 Recibe notificaciones de contenido espiritual diario</li>
+      <li>💬 Chatbot IA para atención al cliente 24/7</li>
+      <li>📚 Búsqueda inteligente en tu base de conocimientos</li>
+      <li>📊 Dashboard con métricas y analíticas</li>
+      <li>🔗 Integración con WhatsApp, Instagram y Facebook</li>
     </ul>
 
     <p style="color: #999; font-size: 13px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
@@ -121,32 +121,32 @@ export const welcomeEmailTemplate = (params: WelcomeEmailParams): { html: string
   </div>
 
   <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-    <p>© ${new Date().getFullYear()} APP PARRO. Todos los derechos reservados.</p>
+    <p>© ${new Date().getFullYear()} Resply. Todos los derechos reservados.</p>
   </div>
 </body>
 </html>
   `.trim();
 
   const text = `
-¡Bienvenido a APP PARRO!
+¡Bienvenido a Resply!
 
 Hola ${userName},
 
-Gracias por unirte a nuestra comunidad. Estamos emocionados de acompañarte en tu camino espiritual.
+Gracias por unirte a nuestra plataforma. Estamos emocionados de ayudarte a mejorar tu atención al cliente con IA.
 
 Para activar tu cuenta y comenzar a disfrutar de todas las funcionalidades, por favor confirma tu correo electrónico visitando:
 ${confirmUrl}
 
-¿Qué puedes hacer con APP PARRO?
-- Lee el evangelio y conoce al santo del día
-- Consulta los eventos y actividades de la parroquia
-- Chatea con nuestro asistente de IA para resolver dudas
-- Recibe notificaciones de contenido espiritual diario
+¿Qué puedes hacer con Resply?
+- Chatbot IA para atención al cliente 24/7
+- Búsqueda inteligente en tu base de conocimientos
+- Dashboard con métricas y analíticas
+- Integración con WhatsApp, Instagram y Facebook
 
 Si no creaste esta cuenta, puedes ignorar este correo.
 
 ---
-© ${new Date().getFullYear()} APP PARRO. Todos los derechos reservados.
+© ${new Date().getFullYear()} Resply. Todos los derechos reservados.
   `.trim();
 
   return { html, text };

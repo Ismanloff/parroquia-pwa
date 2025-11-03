@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chatbot Resply</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 20px 20px 0 0;
+        }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            text-align: right;
+        }
+        .message .bubble {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message.user .bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .message.assistant .bubble {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .message.system .bubble {
+            background: #fff3cd;
+            color: #856404;
+            font-size: 13px;
+        }
+        .input-area {
+            padding: 20px 30px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            border-radius: 0 0 20px 20px;
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+        #queryInput {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #queryInput:focus {
+            border-color: #667eea;
+        }
+        button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: pulse 1.4s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Test Chatbot Resply</h1>
+            <p>Prueba el chatbot con Pinecone + Voyage AI</p>
+        </div>
+
+        <div class="chat-area" id="chatArea"></div>
+
+        <div class="input-area">
+            <div class="input-row">
+                <input
+                    type="text"
+                    id="queryInput"
+                    placeholder="Pregunta algo sobre Resply..."
+                    value="¿Cuáles son los precios de los planes?"
+                />
+                <button id="sendBtn" onclick="sendMessage()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatArea = document.getElementById('chatArea');
+        const queryInput = document.getElementById('queryInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Tenant ID fijo para testing
+        const TENANT_ID = 'tenant_001';
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = `<div class="bubble">${text}</div>`;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+            return div;
+        }
+
+        async function sendMessage() {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            // Disable input
+            queryInput.disabled = true;
+            sendBtn.disabled = true;
+
+            // Show user message
+            addMessage(query, 'user');
+            queryInput.value = '';
+
+            // Show loading
+            const loadingMsg = addMessage('<span class="loading"></span> Pensando...', 'system');
+
+            try {
+                const response = await fetch('/api/chat/message-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: query,
+                        tenant_id: TENANT_ID,
+                        conversationHistory: []
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                // Remove loading
+                loadingMsg.remove();
+
+                // Create assistant message bubble
+                const assistantMsg = addMessage('', 'assistant');
+                const bubble = assistantMsg.querySelector('.bubble');
+
+                // Read stream
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(line => line.trim());
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+
+                                if (data.type === 'text') {
+                                    fullText += data.content;
+                                    bubble.textContent = fullText;
+                                    chatArea.scrollTop = chatArea.scrollHeight;
+                                } else if (data.type === 'tool_call') {
+                                    addMessage(`🔧 Usando herramienta: ${data.toolName}`, 'system');
+                                }
+                            } catch (e) {
+                                // Ignore non-JSON lines
+                            }
+                        }
+                    }
+                }
+
+                if (!fullText) {
+                    bubble.textContent = 'Sin respuesta del chatbot.';
+                }
+
+            } catch (error) {
+                loadingMsg.remove();
+                addMessage(`❌ Error: ${error.message}`, 'system');
+            } finally {
+                queryInput.disabled = false;
+                sendBtn.disabled = false;
+                queryInput.focus();
+            }
+        }
+
+        // Enter to send
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Welcome message
+        addMessage('¡Hola! Soy el asistente de Resply. Pregúntame sobre precios, planes, funcionalidades, etc.', 'assistant');
+    </script>
+</body>
+</html>

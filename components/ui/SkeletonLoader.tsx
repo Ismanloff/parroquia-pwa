@@ -37,7 +37,7 @@ export function SkeletonLoader({ type, className }: SkeletonLoaderProps) {
 }
 
 /**
- * Skeleton for Santo/Evangelio cards
+ * Skeleton for content cards
  */
 export function SkeletonCard() {
   return (

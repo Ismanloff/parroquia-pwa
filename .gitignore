@@ -54,3 +54,10 @@ public/fallback-*.js.map
 
 # Vitest
 .vitest
+
+# Security & Backups
+SECURITY_*.md
+backups/
+*.sql
+*.sql.gz
+DISASTER_RECOVERY_PLAN.md

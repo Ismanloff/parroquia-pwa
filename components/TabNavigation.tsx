@@ -10,19 +10,19 @@ const tabs = [
     id: 'home' as TabType,
     label: 'Inicio',
     icon: Home,
-    ariaLabel: 'Inicio - Ver evangelio y santo del día',
+    ariaLabel: 'Inicio - Ver dashboard y resumen',
   },
   {
     id: 'calendar' as TabType,
     label: 'Calendario',
     icon: Calendar,
-    ariaLabel: 'Calendario - Ver eventos parroquiales',
+    ariaLabel: 'Calendario - Ver eventos y actividades',
   },
   {
     id: 'chat' as TabType,
     label: 'Chat',
     icon: MessageCircle,
-    ariaLabel: 'Chat - Preguntar al asistente parroquial',
+    ariaLabel: 'Chat - Consultar con el asistente',
   },
   {
     id: 'settings' as TabType,

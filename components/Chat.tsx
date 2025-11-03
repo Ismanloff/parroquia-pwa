@@ -35,7 +35,7 @@ export function Chat() {
             </div>
             <div>
               <h1 className="text-[15px] font-bold text-slate-900 dark:text-white tracking-tight leading-none">
-                Chatbot Parroquial
+                Asistente Resply
               </h1>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium tracking-tight leading-none mt-0.5">
                 Asistente con IA 24/7

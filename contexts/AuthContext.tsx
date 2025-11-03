@@ -23,6 +23,7 @@ interface AuthContextType {
   error: string | null;
   isSupabaseConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>; // Alias for signIn
   signUp: (
     email: string,
     password: string,
@@ -266,6 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error,
         isSupabaseConfigured,
         signIn,
+        login: signIn, // Alias for signIn
         signUp,
         signOut,
         resetPassword,

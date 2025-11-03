@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from "zod";
 import { semanticCache } from '../utils/semanticCache';
-import { memoryCache } from '../utils/memoryCache';
 import { StructuredLogger } from '../utils/structuredLogger';
 import { searchResources } from '../tools/resourcesTool';
 
@@ -87,27 +86,24 @@ async function moderateContent(message: string, openaiClient: OpenAI): Promise<{
   }
 }
 
-// ⭐ INPUT GUARDRAIL: Verificar relevancia parroquial
+// ⭐ INPUT GUARDRAIL: Verificar relevancia empresarial
 function checkRelevance(message: string): { isRelevant: boolean; response?: string } {
   const normalized = message.toLowerCase().trim();
 
   const irrelevantKeywords = [
     'bitcoin', 'cripto', 'cryptocurrency', 'ethereum',
-    'comprar', 'vender', 'invertir', 'trading',
     'futbol', 'fútbol', 'deportes', 'partido',
     'recetas', 'cocina', 'restaurante',
-    'programación', 'código', 'javascript', 'python',
     'videojuegos', 'gaming', 'juegos',
-    'política', 'elecciones', 'gobierno',
   ];
 
   const hasIrrelevantKeyword = irrelevantKeywords.some(kw => normalized.includes(kw));
-  const hasParishKeyword = /parroquia|iglesia|misa|sacramento|fe|dios|jesús|virgen|catequesis|bautizo|comunión|confirmación|matrimonio|párroco|padre/i.test(message);
+  const hasBusinessKeyword = /empresa|servicio|producto|soporte|ayuda|información|documento|proceso|evento|recurso/i.test(message);
 
-  if (hasIrrelevantKeyword && !hasParishKeyword) {
+  if (hasIrrelevantKeyword && !hasBusinessKeyword) {
     return {
       isRelevant: false,
-      response: 'Solo puedo ayudarte con información sobre la parroquia: horarios de misas, eventos, catequesis, sacramentos, grupos parroquiales, etc. ¿En qué puedo ayudarte relacionado con la parroquia?'
+      response: 'Solo puedo ayudarte con información sobre nuestros servicios: productos, procesos, eventos, recursos, documentación, etc. ¿En qué puedo ayudarte?'
     };
   }
 
@@ -151,21 +147,20 @@ const MAX_HISTORY_MESSAGES = 15;
 const agentModel = process.env.OPENAI_AGENT_MODEL || "gpt-4o-mini";
 
 // ⚡ INSTRUCCIONES OPTIMIZADAS: Concisas para máxima velocidad (< 3s)
-const AGENT_INSTRUCTIONS = `Asistente parroquial. Responde breve y claro.
+const AGENT_INSTRUCTIONS = `Asistente de soporte empresarial. Responde breve y claro.
 
 TOOLS: get_calendar_events, get_resources (copia COMPLETO a attachments)
 
 REGLAS CRÍTICAS:
 - Usa tools, no adivines
-- Inscripciones/formularios → get_resources + copia a attachments
-- Casos complejos → deriva al párroco
-- Tono acogedor y profesional
+- Formularios/recursos → get_resources + copia a attachments
+- Casos complejos → deriva a soporte especializado
+- Tono profesional y amable
 
-⚠️ COHERENCIA: NO mezcles actividades distintas
-- Si preguntan por "Eloos" → habla SOLO de Eloos
-- Si preguntan por "Cáritas" → habla SOLO de Cáritas
-- NO agregues otras actividades solo porque ocurren el mismo día
-- Mantén el foco en lo que el usuario pregunta específicamente`;
+⚠️ COHERENCIA: Mantén el foco
+- Responde específicamente lo que el usuario pregunta
+- NO agregues información no solicitada
+- Sé directo y conciso`;
 
 // ⚡ CONFIGURACIÓN DE RUNTIME: Extender timeout de Edge Function
 export const runtime = 'nodejs'; // Usar Node.js runtime (no Edge) para mayor timeout
@@ -177,7 +172,7 @@ const FUNCTIONS = [
     type: "function" as const,
     function: {
       name: "get_calendar_events",
-      description: "Obtiene eventos del calendario parroquial por fecha/periodo.",
+      description: "Obtiene eventos del calendario empresarial por fecha/periodo.",
       parameters: {
         type: "object",
         properties: {
@@ -211,7 +206,7 @@ const FUNCTIONS = [
     type: "function" as const,
     function: {
       name: "get_resources",
-      description: "Busca formularios, PDFs y documentos parroquiales.",
+      description: "Busca formularios, PDFs y documentos empresariales.",
       parameters: {
         type: "object",
         properties: {
@@ -247,7 +242,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // 🛡️ INPUT GUARDRAIL: Verificar relevancia parroquial
+    // 🛡️ INPUT GUARDRAIL: Verificar relevancia del mensaje
     const relevanceCheck = checkRelevance(message);
     if (!relevanceCheck.isRelevant) {
       console.log(`🚫 [${requestId}] Consulta irrelevante detectada`);
@@ -300,24 +295,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 💾 CACHE SEMÁNTICO DESACTIVADO (2025-01-XX)
-    // Razón: Pinecone es rápido (0.3s) + streaming oculta latencia
-    // Cache solo para Calendar API (tiene su propio cache de 5 min)
-
-    // let cachedResponse = await memoryCache.get(message);
-    // let cacheSource = 'memory';
-
-    // if (!cachedResponse) {
-    //   try {
-    //     cachedResponse = await semanticCache.get(message);
-    //     cacheSource = 'kv';
-    //   } catch (error) {
-    //     console.log(`⚠️ [${requestId}] KV cache no disponible, usando solo memory cache`);
-    //   }
-    // }
-
-    // if (cachedResponse) {
-    //   console.log(`⚡ [${requestId}] CACHE HIT - retornando desde ${cacheSource} cache`);
+    // 💾 CACHE ELIMINADO (Multi-tenant migration 2025-11-02)
+    // Memory cache con FAQs hardcoded fue eliminado para soportar multi-tenancy
+    // Cada tenant tendrá su propia knowledge base en Pinecone con namespace aislado
     //   return NextResponse.json({
     //     message: cachedResponse,
     //     fromCache: true,

@@ -1,74 +1,59 @@
 {
-  "comunidad_eloos": {
-    "title": "Formulario de Inscripción - Comunidad Eloos",
-    "description": "Formulario para unirse a la comunidad Eloos (Entrega y Superación)",
-    "url": "https://form.typeform.com/to/eA98edUa",
+  "producto_demo": {
+    "title": "Demo del Producto",
+    "description": "Solicita una demostración personalizada de nuestra plataforma",
+    "url": "https://form.typeform.com/to/demo",
     "type": "url",
     "keywords": [
-      "comunidad",
-      "eloos",
-      "entrega",
-      "superacion",
-      "superación",
-      "unirse",
-      "apuntarse",
-      "inscripcion",
-      "inscripción",
-      "formulario",
-      "joven",
-      "jóvenes",
-      "grupo"
+      "demo",
+      "demostración",
+      "prueba",
+      "producto",
+      "ver",
+      "mostrar",
+      "presentación"
     ]
   },
-  "catequesis_infantil": {
-    "title": "Formulario de Inscripción - Catequesis Infantil",
-    "description": "Formulario para inscribir niños en catequesis (PENDIENTE: Añadir PDF cuando esté disponible)",
-    "url": "/docs/catequesis-infantil-inscripcion.pdf",
+  "documentacion_api": {
+    "title": "Documentación API",
+    "description": "Guía completa de integración y uso de nuestra API",
+    "url": "/docs/api-documentation.pdf",
     "type": "pdf",
     "keywords": [
-      "catequesis",
-      "infantil",
-      "niños",
-      "niños",
-      "inscripcion",
-      "inscripción",
-      "apuntar",
-      "primera comunion",
-      "primera comunión"
+      "api",
+      "documentación",
+      "integración",
+      "desarrollo",
+      "sdk",
+      "endpoints"
     ]
   },
-  "autorizacion_salida": {
-    "title": "Autorización para Salidas y Excursiones",
-    "description": "Documento de autorización parental para actividades fuera de la parroquia (PENDIENTE: Añadir PDF cuando esté disponible)",
-    "url": "/docs/autorizacion-salida-parroquial.pdf",
+  "politica_privacidad": {
+    "title": "Política de Privacidad",
+    "description": "Política de privacidad y tratamiento de datos",
+    "url": "/docs/privacy-policy.pdf",
     "type": "pdf",
     "keywords": [
-      "autorizacion",
-      "autorización",
-      "salida",
-      "excursion",
-      "excursión",
-      "montaña",
-      "viaje",
-      "actividad",
-      "permiso",
-      "parental"
+      "privacidad",
+      "datos",
+      "rgpd",
+      "gdpr",
+      "política",
+      "protección"
     ]
   },
-  "contacto_parroco": {
-    "title": "Información de Contacto del Párroco",
-    "description": "Datos de contacto para consultas personales con el párroco",
+  "contacto_soporte": {
+    "title": "Contactar Soporte",
+    "description": "Información de contacto para consultas de soporte técnico",
     "url": "/contacto",
     "type": "url",
     "keywords": [
       "contacto",
-      "parroco",
-      "párroco",
-      "sacerdote",
-      "padre",
+      "soporte",
+      "ayuda",
+      "técnico",
       "consulta",
-      "cita",
-      "hablar"
+      "asistencia"
     ]
   }
 }

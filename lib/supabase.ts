@@ -13,7 +13,7 @@ if (supabaseUrl && supabaseAnonKey) {
       autoRefreshToken: true, // ✅ Refrescar token automáticamente
       detectSessionInUrl: true, // ✅ Detectar sesión en URL (OAuth redirects)
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      storageKey: 'parroquia-auth-token',
+      storageKey: 'resply-auth-token',
     },
   });
 } else {

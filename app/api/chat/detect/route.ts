@@ -28,21 +28,21 @@ export async function POST(request: NextRequest) {
     const contextLine = context ? `CONTEXTO: ${context}` : '';
     const cacheHint = lastFromCache ? 'IMPORTANTE: Si pide MÁS información/detalles → FULL (buscar documentos completos)' : '';
 
-    const systemPrompt = `Eres un clasificador de mensajes para un chatbot parroquial.
+    const systemPrompt = `Eres un clasificador de mensajes para un asistente de atención al cliente.
 
 QUICK (usa GPT-4o-mini, < 3s):
 - Saludos y despedidas
 - Agradecimientos
-- FAQs simples: horarios, teléfonos, qué es X
+- FAQs simples: horarios, contacto, qué es X
 - Follow-ups contextuales simples
 - Confirmaciones
 
 FULL (usa Vector Store + streaming):
 - Calendario: eventos, fechas futuras
-- Documentos: normativas, procedimientos
+- Documentos: políticas, procedimientos, guías
 - Queries complejas: "explica", "cómo funciona"
 - Follow-ups expansivos: "dame MÁS información" (especialmente si respuesta anterior fue cache)
-- Inscripciones/formularios
+- Solicitudes de información detallada
 
 ${contextLine}
 ${cacheHint}

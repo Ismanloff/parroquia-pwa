@@ -5,6 +5,7 @@ import { resourcesTool } from '../tools/resourcesTool';
 import { pineconeTool } from '../tools/pineconeTool';
 // import { detectQuickActions } from '../utils/quickActionsConfig';
 import Anthropic from '@anthropic-ai/sdk';
+import { setCurrentTenantId } from '@/lib/tenant-context';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -79,16 +80,16 @@ Reglas:
 - Sé específico y claro
 - Si se refiere a algo mencionado antes, inclúyelo explícitamente
 - Máximo 20 palabras
-- Añade contexto parroquial si es relevante
+- Añade contexto del negocio si es relevante
 
 Ejemplos:
-Usuario anterior: "actividades para jóvenes"
-Pregunta actual: "y para matrimonios?"
-Reescritura: "¿Qué actividades hay para matrimonios en la parroquia?"
+Usuario anterior: "precios del plan básico"
+Pregunta actual: "y del premium?"
+Reescritura: "¿Cuál es el precio del plan premium?"
 
-Usuario anterior: "qué es Eloos"
-Pregunta actual: "y Bartimeo?"
-Reescritura: "¿Qué es el grupo Bartimeo de la parroquia?"
+Usuario anterior: "horario de atención"
+Pregunta actual: "y los fines de semana?"
+Reescritura: "¿Cuál es el horario de atención los fines de semana?"
 
 Responde SOLO con la pregunta reescrita, sin explicaciones.`,
       messages: [
@@ -150,51 +151,51 @@ function detectConversationalQuery(message: string): 'greeting' | 'acknowledgmen
 function getConversationalResponse(type: 'greeting' | 'acknowledgment' | 'chitchat'): string {
   switch (type) {
     case 'greeting':
-      return '¡Hola! Soy el asistente parroquial. Puedo ayudarte con información sobre actividades, grupos, sacramentos y más. ¿En qué puedo ayudarte?';
+      return '¡Hola! Soy tu asistente de atención al cliente con IA. Puedo ayudarte con información sobre productos, servicios, precios y más. ¿En qué puedo ayudarte?';
     case 'acknowledgment':
       return '¡De nada! ¿Hay algo más en lo que pueda ayudarte?';
     case 'chitchat':
-      return '¡Todo bien por aquí! Estoy listo para ayudarte con cualquier duda sobre la parroquia. ¿Qué necesitas saber?';
+      return '¡Todo bien por aquí! Estoy listo para ayudarte con cualquier duda. ¿Qué necesitas saber?';
   }
 }
 
 // 1. Definir las herramientas que usa el agente
-// ✅ PINECONE: Búsqueda vectorial en documentos parroquiales (80-90% más rápido que fileSearch)
-// Índice: parroquias | 24 documentos | Embeddings: text-embedding-3-large (3072 dims)
+// ✅ PINECONE: Búsqueda vectorial en documentos de la empresa (80-90% más rápido que fileSearch)
+// Índice: knowledge base | Embeddings: text-embedding-3-large (3072 dims)
 
 const agentModel = process.env.OPENAI_AGENT_MODEL || "gpt-4o-mini";
-const agentName = process.env.AGENT_NAME || "Asistente Parroquial";
+const agentName = process.env.AGENT_NAME || "Asistente de Atención al Cliente";
 
 // ⚡ INSTRUCCIONES OPTIMIZADAS (concisas para velocidad)
-const agentInstructions = `Asistente parroquial. Responde breve y claro.
+const agentInstructions = `Asistente de atención al cliente con IA. Responde breve y claro.
 
 TOOLS: get_calendar_events, get_resources, search_parish_info
 
 ⚠️ REGLA CRÍTICA: SIEMPRE USA search_parish_info PRIMERO
-- Para CUALQUIER pregunta sobre actividades, grupos, sacramentos, o información parroquial
+- Para CUALQUIER pregunta sobre productos, servicios, precios, políticas, o información de la empresa
 - NUNCA NUNCA respondas de memoria - SIEMPRE busca en los documentos primero
 - Aunque creas saber la respuesta, USA search_parish_info para verificar
 
 Ejemplos que REQUIEREN search_parish_info:
-  * "Qué es Eloos?" → search_parish_info
-  * "Qué es oración de madres?" → search_parish_info
-  * "Biblia y teología" → search_parish_info
-  * "Grupos de la parroquia" → search_parish_info
-  * "Horarios de Cáritas" → search_parish_info
-  * "Cómo me bautizo?" → search_parish_info
-  * "Qué actividades hay" → search_parish_info
-  * "Oro y Café" → search_parish_info
+  * "Qué planes ofrecen?" → search_parish_info
+  * "Cuál es la política de reembolso?" → search_parish_info
+  * "Cómo funciona el servicio?" → search_parish_info
+  * "Precios y facturación" → search_parish_info
+  * "Horarios de soporte" → search_parish_info
+  * "Cómo me registro?" → search_parish_info
+  * "Qué funcionalidades tiene" → search_parish_info
+  * "Integraciones disponibles" → search_parish_info
 
 USO DE search_parish_info (Pinecone):
-- Usa search_parish_info para buscar en documentos oficiales de la parroquia
-- Para consultas sobre sacramentos, grupos, actividades, normativas, historia
-- Información sobre catequesis, Eloos, Cáritas, comunidades religiosas, etc.
-- Puedes filtrar por categoría: sacramentos, catequesis, liturgia, caritas, jovenes, familias
+- Usa search_parish_info para buscar en la base de conocimiento de la empresa
+- Para consultas sobre productos, servicios, precios, políticas, procedimientos, FAQ
+- Información sobre características, integraciones, soporte, facturación, etc.
+- Puedes filtrar por categoría: productos, servicios, precios, soporte, integraciones, políticas
 - Responde con la información de forma natural y directa
-- Esta herramienta es 80-90% más rápida que la anterior
+- Esta herramienta es 80-90% más rápida que búsquedas tradicionales
 
 USO DE get_calendar_events:
-- Para eventos con fechas específicas: "eventos hoy", "misas esta semana", "qué hay mañana"
+- Para eventos con fechas específicas: "eventos hoy", "webinars esta semana", "qué hay mañana"
 
 USO DE get_resources:
 - Para formularios de inscripción y enlaces directos a Typeform
@@ -234,14 +235,23 @@ export async function POST(request: NextRequest) {
   console.log(`\n🌊 ========== STREAMING REQUEST ${requestId} ==========`);
 
   try {
-    const { message, conversationHistory: clientHistory } = await request.json();
+    const { message, conversationHistory: clientHistory, tenant_id } = await request.json();
 
     if (!message) {
       return new Response('Message is required', { status: 400 });
     }
 
+    if (!tenant_id) {
+      return new Response('tenant_id is required for multi-tenant queries', { status: 400 });
+    }
+
+    // ⚠️ TODO: Implementar AsyncLocalStorage en producción
+    // Por ahora usamos variable global (thread-unsafe pero funcional para MVP)
+    setCurrentTenantId(tenant_id);
+
     console.log('⚡🌊 Iniciando streaming con @openai/agents...');
     console.log(`📝 Mensaje original: ${message.substring(0, 100)}...`);
+    console.log(`🏢 Tenant ID: ${tenant_id} (stored globally for tools)`);
     console.log(`📚 Historial: ${(clientHistory || []).length} mensajes`);
 
     // ===== PRE-FILTRO: DETECTAR QUERIES CONVERSACIONALES =====
@@ -332,7 +342,7 @@ export async function POST(request: NextRequest) {
     const runner = new Runner({
       traceMetadata: {
         request_id: requestId,
-        workflow_name: "parroquia_chatbot_streaming",
+        workflow_name: "resply_chatbot_streaming",
         timestamp: new Date().toISOString(),
       },
     });
