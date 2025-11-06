@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher';
 import { WorkspaceProvider } from '@/lib/contexts/WorkspaceContext';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { UserMenu } from '@/components/layout/UserMenu';
 import { Toaster } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -50,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex items-center gap-4">
                 <WorkspaceSwitcher />
               </div>
-              {/* TODO: Agregar UserMenu */}
+              <UserMenu />
             </div>
           </header>
 
