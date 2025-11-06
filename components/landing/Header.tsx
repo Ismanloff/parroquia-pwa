@@ -19,6 +19,7 @@ export function Header() {
     { name: 'Características', href: '#features' },
     { name: 'Documentación', href: '#documentation' },
     { name: 'Precios', href: '#pricing' },
+    { name: 'Ayuda', href: '/help' },
     { name: 'Contacto', href: '#contact' },
   ];
 

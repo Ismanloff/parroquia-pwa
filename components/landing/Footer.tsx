@@ -19,10 +19,10 @@ export function Footer() {
       { name: 'Prensa', href: '#' },
     ],
     support: [
-      { name: 'Centro de Ayuda', href: '#' },
-      { name: 'Contacto', href: '#contact' },
-      { name: 'Estado del Sistema', href: '#' },
-      { name: 'Términos de Servicio', href: '#' },
+      { name: 'Centro de Ayuda', href: '/help' },
+      { name: 'Contacto', href: '/help/contact' },
+      { name: 'Preguntas Frecuentes', href: '/help/faq' },
+      { name: 'Guía de Inicio', href: '/help/getting-started' },
     ],
     legal: [
       { name: 'Privacidad', href: '#' },

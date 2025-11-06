@@ -19,6 +19,9 @@ const ALLOWED_ORIGINS = [
   'https://resply.com',
   'https://www.resply.com',
   'https://app.resply.com',
+  'https://resply.vercel.app',
+  // Allow all Vercel preview deployments
+  ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
 ];
 
 /**
@@ -81,6 +84,11 @@ function verifyCsrf(request: NextRequest): boolean {
       const allowedUrl = new URL(allowedOrigin);
       return allowedUrl.host === originUrl.host;
     });
+
+    // También permitir subdominios de vercel.app (preview deployments)
+    if (originUrl.host.endsWith('.vercel.app') && host?.endsWith('.vercel.app')) {
+      return true;
+    }
 
     return isAllowed;
   } catch (error) {
