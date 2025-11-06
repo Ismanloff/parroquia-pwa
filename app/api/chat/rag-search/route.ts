@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
 import Anthropic from '@anthropic-ai/sdk';
+import { withWorkspaceAuth } from '@/lib/api/auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -88,84 +89,80 @@ Expanded query:`,
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const {
-      query,
-      workspaceId,
-      topK = 5,
-      includeMetadata = true,
-      expandQuery: shouldExpandQuery = false,
-    } = body;
+  return withWorkspaceAuth(req, async ({ user, workspaceId, membership }) => {
+    try {
+      const body = await req.json();
+      const {
+        query,
+        topK = 5,
+        includeMetadata = true,
+        expandQuery: shouldExpandQuery = false,
+      } = body;
 
-    // Validate inputs
-    if (!query || typeof query !== 'string') {
+      // Validate inputs
+      if (!query || typeof query !== 'string') {
+        return NextResponse.json(
+          { error: 'Query is required and must be a string' },
+          { status: 400 }
+        );
+      }
+
+      console.log('RAG Search:', { query, workspaceId, topK, shouldExpandQuery, userId: user.id, role: membership.role });
+
+      // Step 1: Optionally expand query for better search
+      let searchQuery = query;
+      if (shouldExpandQuery) {
+        searchQuery = await expandQuery(query);
+      }
+
+      // Step 2: Generate embedding for the query
+      console.log('Generating embedding for query...');
+      const queryEmbedding = await generateQueryEmbedding(searchQuery);
+
+      // Step 3: Search in Pinecone namespace
+      console.log('Searching in Pinecone namespace:', workspaceId);
+      const index = pinecone.index(process.env.PINECONE_INDEX_NAME || 'saas');
+      const namespace = index.namespace(workspaceId);
+
+      const searchResponse = await namespace.query({
+        vector: queryEmbedding,
+        topK: topK,
+        includeMetadata: includeMetadata,
+      });
+
+      // Step 4: Format results
+      const results: SearchResult[] = searchResponse.matches.map((match) => ({
+        id: match.id,
+        score: match.score || 0,
+        text: (match.metadata?.text as string) || '',
+        metadata: {
+          documentId: (match.metadata?.documentId as string) || '',
+          workspaceId: (match.metadata?.workspaceId as string) || '',
+          filename: (match.metadata?.filename as string) || '',
+          chunkIndex: (match.metadata?.chunkIndex as number) || 0,
+        },
+      }));
+
+      console.log(`Found ${results.length} results`);
+
+      return NextResponse.json({
+        success: true,
+        query: query,
+        expandedQuery: shouldExpandQuery ? searchQuery : undefined,
+        results: results,
+        totalResults: results.length,
+      });
+    } catch (error: any) {
+      console.error('Error in RAG search:', error);
       return NextResponse.json(
-        { error: 'Query is required and must be a string' },
-        { status: 400 }
+        {
+          error: 'Internal server error',
+          message: process.env.NODE_ENV === 'production'
+            ? 'An error occurred while searching documents'
+            : error.message || 'Unknown error',
+        },
+        { status: 500 }
       );
     }
-
-    if (!workspaceId || typeof workspaceId !== 'string') {
-      return NextResponse.json(
-        { error: 'WorkspaceId is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    console.log('RAG Search:', { query, workspaceId, topK, shouldExpandQuery });
-
-    // Step 1: Optionally expand query for better search
-    let searchQuery = query;
-    if (shouldExpandQuery) {
-      searchQuery = await expandQuery(query);
-    }
-
-    // Step 2: Generate embedding for the query
-    console.log('Generating embedding for query...');
-    const queryEmbedding = await generateQueryEmbedding(searchQuery);
-
-    // Step 3: Search in Pinecone namespace
-    console.log('Searching in Pinecone namespace:', workspaceId);
-    const index = pinecone.index(process.env.PINECONE_INDEX_NAME || 'saas');
-    const namespace = index.namespace(workspaceId);
-
-    const searchResponse = await namespace.query({
-      vector: queryEmbedding,
-      topK: topK,
-      includeMetadata: includeMetadata,
-    });
-
-    // Step 4: Format results
-    const results: SearchResult[] = searchResponse.matches.map((match) => ({
-      id: match.id,
-      score: match.score || 0,
-      text: (match.metadata?.text as string) || '',
-      metadata: {
-        documentId: (match.metadata?.documentId as string) || '',
-        workspaceId: (match.metadata?.workspaceId as string) || '',
-        filename: (match.metadata?.filename as string) || '',
-        chunkIndex: (match.metadata?.chunkIndex as number) || 0,
-      },
-    }));
-
-    console.log(`Found ${results.length} results`);
-
-    return NextResponse.json({
-      success: true,
-      query: query,
-      expandedQuery: shouldExpandQuery ? searchQuery : undefined,
-      results: results,
-      totalResults: results.length,
-    });
-  } catch (error: any) {
-    console.error('Error in RAG search:', error);
-    return NextResponse.json(
-      {
-        error: error.message || 'Internal server error',
-        details: error.toString(),
-      },
-      { status: 500 }
-    );
-  }
+  });
 }

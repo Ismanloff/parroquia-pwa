@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase';
+import { authenticateRequest, verifyWorkspaceAccess } from '@/lib/api/auth';
 
 export const runtime = 'nodejs';
 
 // GET conversation with messages
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -16,11 +17,20 @@ export async function GET(
       );
     }
 
+    // Authenticate user
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Valid authentication token required' },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
 
-    console.log('Getting conversation:', id);
+    console.log('Getting conversation:', id, 'by user:', auth.user.id);
 
-    // Get conversation with messages
+    // Get conversation first to check workspace access
     const { data: conversation, error } = await supabaseAdmin
       .from('conversations')
       .select(`
@@ -35,6 +45,15 @@ export async function GET(
       return NextResponse.json(
         { error: 'Conversation not found' },
         { status: 404 }
+      );
+    }
+
+    // Verify user has access to this conversation's workspace
+    const membership = await verifyWorkspaceAccess(auth.user.id, conversation.workspace_id);
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'Forbidden', message: 'You do not have access to this workspace' },
+        { status: 403 }
       );
     }
 
@@ -71,11 +90,43 @@ export async function PATCH(
       );
     }
 
+    // Authenticate user
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Valid authentication token required' },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const body = await req.json();
     const { status, metadata } = body;
 
-    console.log('Updating conversation:', id, { status, metadata });
+    // First, get the conversation to check workspace access
+    const { data: existingConversation, error: fetchError } = await supabaseAdmin
+      .from('conversations')
+      .select('workspace_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingConversation) {
+      return NextResponse.json(
+        { error: 'Conversation not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user has access to this conversation's workspace
+    const membership = await verifyWorkspaceAccess(auth.user.id, existingConversation.workspace_id);
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'Forbidden', message: 'You do not have access to this workspace' },
+        { status: 403 }
+      );
+    }
+
+    console.log('Updating conversation:', id, { status, metadata }, 'by user:', auth.user.id);
 
     const updates: any = { updated_at: new Date().toISOString() };
     if (status) updates.status = status;

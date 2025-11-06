@@ -57,11 +57,13 @@ export class RateLimiter {
         resetAt: now + config.windowMs,
       };
     } catch (error) {
-      console.error('Error en rate limiter:', error);
-      // En caso de error, permitir la request (fail open)
+      console.error('🚨 CRITICAL: Rate limiter failure - failing SECURE (blocking request):', error);
+      // SECURITY: Fail secure - block requests when rate limiter is unavailable
+      // This prevents abuse during KV outages but may impact legitimate users
+      // TODO: Implement alerting when this occurs
       return {
-        allowed: true,
-        remaining: config.maxRequests,
+        allowed: false,
+        remaining: 0,
         resetAt: now + config.windowMs,
       };
     }

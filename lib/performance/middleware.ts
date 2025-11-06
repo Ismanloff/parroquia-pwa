@@ -128,14 +128,21 @@ export async function withRateLimit(
 
     return response;
   } catch (error) {
-    console.error('Rate limiting error:', error);
+    console.error('🚨 CRITICAL: Rate limiting error - failing SECURE:', error);
     captureError(error instanceof Error ? error : new Error(String(error)), {
       endpoint: req.url,
       method: req.method,
     });
 
-    // Fail open - allow request if rate limiting fails
-    return handler();
+    // SECURITY: Fail secure - block request if rate limiting fails
+    // This prevents abuse during infrastructure outages
+    return NextResponse.json(
+      {
+        error: 'Service temporarily unavailable',
+        message: 'Rate limiting system is experiencing issues. Please try again later.',
+      },
+      { status: 503 }
+    );
   }
 }
 
