@@ -136,7 +136,7 @@ export class StructuredLogger {
 
   static guardrailTriggered(params: {
     requestId: string;
-    guardrailType: 'input' | 'output';
+    guardrailType: string;
     guardrailName: string;
     reason: string;
     message: string;

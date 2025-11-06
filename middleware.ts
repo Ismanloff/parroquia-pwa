@@ -1,136 +1,197 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
+/**
+ * Next.js Middleware - FASE 1
+ *
+ * Implementa protección CSRF, validación de origen y rate limiting básico.
+ * Se ejecuta en Edge Runtime antes de cada request.
+ *
+ * @see https://nextjs.org/docs/app/building-your-application/routing/middleware
+ * @see https://nextjs.org/blog/security-nextjs-server-components-actions
+ */
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-        },
-      },
-    }
-  );
+/**
+ * Dominios permitidos para CORS
+ */
+const ALLOWED_ORIGINS = [
+  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  'https://resply.com',
+  'https://www.resply.com',
+  'https://app.resply.com',
+];
 
-  // Get user session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+/**
+ * Rutas que se excluyen de verificación CSRF
+ * (típicamente webhooks externos que usan signature verification)
+ */
+const CSRF_EXEMPT_PATHS = [
+  '/api/webhooks/whatsapp',
+  '/api/webhooks/telegram',
+  '/api/webhooks/stripe',
+];
 
-  const isAuthPage = request.nextUrl.pathname === '/';
-  const isDashboardPage = request.nextUrl.pathname.startsWith('/dashboard');
-  const isOnboardingPage = request.nextUrl.pathname === '/onboarding';
+/**
+ * Métodos HTTP seguros que no requieren CSRF protection
+ */
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
-  // Redirect authenticated users away from auth page
-  if (isAuthPage && user) {
-    // Check if user has completed onboarding
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('workspace_id, workspaces!inner(id), onboarding_progress!inner(completed)')
-      .eq('user_id', user.id)
-      .eq('role', 'owner')
-      .single();
-
-    if (membership) {
-      // @ts-ignore - TypeScript doesn't recognize the nested relation
-      const onboardingCompleted = membership.onboarding_progress?.completed;
-
-      if (!onboardingCompleted) {
-        return NextResponse.redirect(new URL('/onboarding', request.url));
-      }
-
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-
-    // User has no workspace, shouldn't happen, but redirect to landing
-    return NextResponse.redirect(new URL('/', request.url));
+/**
+ * Verifica CSRF comparando Origin/Referer con Host
+ * Next.js 14 hace esto automáticamente para Server Actions,
+ * pero debemos hacerlo manualmente para API routes
+ */
+function verifyCsrf(request: NextRequest): boolean {
+  // Métodos seguros no necesitan protección
+  if (SAFE_METHODS.includes(request.method)) {
+    return true;
   }
 
-  // Protect dashboard routes
-  if (isDashboardPage && !user) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Rutas exentas (webhooks con signature verification)
+  const pathname = request.nextUrl.pathname;
+  if (CSRF_EXEMPT_PATHS.some((path) => pathname.startsWith(path))) {
+    return true;
   }
 
-  // Protect onboarding route
-  if (isOnboardingPage && !user) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Obtener origin del request
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+  const host = request.headers.get('host');
+
+  // Si no hay origin ni referer, bloquear (posible CSRF)
+  if (!origin && !referer) {
+    return false;
   }
 
-  // Check if user has completed onboarding for dashboard access
-  if (isDashboardPage && user) {
-    const { data: membership } = await supabase
-      .from('workspace_members')
-      .select('workspace_id, onboarding_progress!inner(completed)')
-      .eq('user_id', user.id)
-      .eq('role', 'owner')
-      .single();
+  // Verificar que origin/referer coincida con host
+  try {
+    const originUrl = origin ? new URL(origin) : referer ? new URL(referer) : null;
 
-    if (!membership) {
-      // User has no workspace, redirect to landing
-      return NextResponse.redirect(new URL('/', request.url));
+    if (!originUrl) {
+      return false;
     }
 
-    // @ts-ignore - TypeScript doesn't recognize the nested relation
-    const onboardingCompleted = membership.onboarding_progress?.completed;
-
-    if (!onboardingCompleted) {
-      return NextResponse.redirect(new URL('/onboarding', request.url));
+    // Verificar contra host actual
+    if (originUrl.host === host) {
+      return true;
     }
-  }
 
-  return response;
+    // Verificar contra dominios permitidos
+    const isAllowed = ALLOWED_ORIGINS.some((allowedOrigin) => {
+      const allowedUrl = new URL(allowedOrigin);
+      return allowedUrl.host === originUrl.host;
+    });
+
+    return isAllowed;
+  } catch (error) {
+    // URL inválida = bloquear
+    return false;
+  }
 }
 
+/**
+ * Middleware principal
+ */
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 1. CSRF Protection para API routes
+  if (pathname.startsWith('/api')) {
+    const csrfValid = verifyCsrf(request);
+
+    if (!csrfValid) {
+      console.warn('[CSRF] Blocked request:', {
+        method: request.method,
+        pathname,
+        origin: request.headers.get('origin'),
+        referer: request.headers.get('referer'),
+        host: request.headers.get('host'),
+      });
+
+      return new NextResponse(
+        JSON.stringify({
+          error: 'CSRF verification failed',
+          message: 'Invalid origin or referer header',
+        }),
+        {
+          status: 403,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+  }
+
+  // 2. CORS Headers para API routes
+  if (pathname.startsWith('/api')) {
+    const origin = request.headers.get('origin');
+
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      const isAllowedOrigin = origin && ALLOWED_ORIGINS.includes(origin);
+
+      if (isAllowedOrigin) {
+        return new NextResponse(null, {
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+            'Access-Control-Allow-Headers':
+              'Content-Type, Authorization, X-Requested-With, X-Request-ID',
+            'Access-Control-Max-Age': '86400', // 24 horas
+            'Access-Control-Allow-Credentials': 'true',
+          },
+        });
+      }
+
+      return new NextResponse(null, { status: 403 });
+    }
+
+    // Add CORS headers to actual requests
+    const response = NextResponse.next();
+
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      response.headers.set(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Requested-With, X-Request-ID'
+      );
+    }
+
+    // 3. Security Headers adicionales (complementan los de next.config.ts)
+    response.headers.set('X-Request-ID', crypto.randomUUID());
+    response.headers.set('X-Middleware-Version', '1.0.0');
+
+    return response;
+  }
+
+  // 4. Para rutas públicas (widget), permitir CORS más amplio
+  if (pathname.startsWith('/widget') || pathname === '/api/chat/widget') {
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-Widget-ID');
+    return response;
+  }
+
+  return NextResponse.next();
+}
+
+/**
+ * Configuración de middleware
+ * Se ejecuta en todas las rutas excepto las estáticas
+ */
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Match all request paths except:
      * - _next/static (static files)
-     * - _next/image (image optimization files)
+     * - _next/image (image optimization)
      * - favicon.ico (favicon file)
-     * - public files (public folder)
+     * - public folder
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],

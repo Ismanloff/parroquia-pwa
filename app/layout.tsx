@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Providers } from '@/components/Providers';
 import { ToastContainer } from '@/components/ui/ToastContainer';
+import { CommandPalette } from '@/components/CommandPalette';
 import './globals.css';
 
 const geistSans = Geist({
@@ -17,6 +20,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Resply - Asistente de Atención al Cliente',
   description: 'Tu asistente de soporte empresarial con IA disponible 24/7',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
@@ -72,10 +85,13 @@ export default function RootLayout({
         </a>
         <Providers>
           <ToastContainer />
+          <CommandPalette />
           <main id="main-content" role="main">
             {children}
           </main>
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

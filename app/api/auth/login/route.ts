@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase';
+import { logLogin } from '@/lib/audit';
+import { captureError, setUserContext } from '@/lib/monitoring/sentry';
+import { withRateLimit, withTiming, withErrorHandler, RATE_LIMITS } from '@/lib/performance/middleware';
 
 export const runtime = 'edge';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -13,6 +16,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password } = await req.json();
+
+    // Extraer IP y User Agent para audit logging
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined;
+    const userAgent = req.headers.get('user-agent') || undefined;
 
     // Validaciones
     if (!email || !password) {
@@ -30,6 +37,15 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Login error:', error);
+
+      // AUDIT: Log failed login attempt
+      await logLogin(
+        email, // Use email as identifier since we don't have userId yet
+        false, // failed
+        ipAddress,
+        userAgent,
+        error.message
+      );
 
       // Mensajes de error personalizados
       if (error.message.includes('Invalid login credentials')) {
@@ -59,16 +75,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obtener perfil del usuario
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+    // AUDIT: Log successful login
+    await logLogin(
+      data.user.id,
+      true, // success
+      ipAddress,
+      userAgent
+    );
 
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-    }
+    // Set user context in Sentry for future error tracking
+    setUserContext(data.user.id, data.user.email || undefined);
 
     return NextResponse.json(
       {
@@ -76,7 +92,6 @@ export async function POST(req: NextRequest) {
         user: {
           id: data.user.id,
           email: data.user.email,
-          ...(profile || {}),
         },
         session: {
           access_token: data.session.access_token,
@@ -88,9 +103,31 @@ export async function POST(req: NextRequest) {
     );
   } catch (error: any) {
     console.error('Error in login endpoint:', error);
+
+    // Capture error to Sentry
+    captureError(error, {
+      endpoint: '/api/auth/login',
+      method: 'POST',
+      additionalData: {
+        errorMessage: error.message,
+      },
+    });
+
     return NextResponse.json(
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
   }
+}
+
+// Apply rate limiting (5 login attempts per minute) to prevent brute force
+export async function POST(req: NextRequest) {
+  return withRateLimit(
+    req,
+    RATE_LIMITS.AUTH,
+    withTiming(() => withErrorHandler(() => handlePOST(req), {
+      endpoint: '/api/auth/login',
+      method: 'POST',
+    }))
+  );
 }

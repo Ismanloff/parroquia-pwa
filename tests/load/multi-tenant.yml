@@ -1,0 +1,193 @@
+# Multi-Tenant Load Test
+# Simulates 50-100 tenants using the platform simultaneously
+#
+# This test combines all critical endpoints to simulate
+# realistic multi-tenant usage patterns
+#
+# Usage:
+#   npm run test:load:multi-tenant
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    # 10 tenants
+    - duration: 120
+      arrivalRate: 10
+      name: "10 active tenants"
+    # Ramp to 50 tenants
+    - duration: 180
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp to 50 tenants"
+    # 50 tenants sustained
+    - duration: 300
+      arrivalRate: 50
+      name: "50 tenants sustained"
+    # Peak: 100 tenants
+    - duration: 180
+      arrivalRate: 50
+      rampTo: 100
+      name: "Peak: 100 tenants"
+    # Cool down
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 10
+      name: "Cool down"
+  processor: "./load-test-helpers.js"
+  plugins:
+    expect: {}
+    metrics-by-endpoint:
+      stripQueryString: true
+  variables:
+    authToken: "{{ $processEnvironment.TEST_AUTH_TOKEN }}"
+  ensure:
+    maxErrorRate: 5      # Max 5% error rate
+    p95: 10000           # P95 < 10s
+    p99: 30000           # P99 < 30s
+
+scenarios:
+  # Scenario 1: Customer asks question via widget (most common)
+  - name: "Widget User Journey"
+    weight: 50
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomMessage"
+      # Customer sends message
+      - post:
+          url: "/api/conversations/widget-conversation-{{ $randomNumber(1, 200) }}/messages"
+          headers:
+            Content-Type: "application/json"
+            X-Workspace-ID: "{{ workspaceId }}"
+          json:
+            content: "{{ randomMessage }}"
+            role: "user"
+            metadata:
+              customerName: "Widget User {{ $randomNumber(1, 5000) }}"
+          expect:
+            - statusCode: 201
+      - function: "shortThink"
+      # AI processes and responds
+      - post:
+          url: "/api/chat/completions"
+          headers:
+            X-Workspace-ID: "{{ workspaceId }}"
+            Content-Type: "application/json"
+          json:
+            message: "{{ randomMessage }}"
+            workspaceId: "{{ workspaceId }}"
+            conversationId: "widget-conversation-{{ $randomNumber(1, 200) }}"
+            useRag: true
+          expect:
+            - statusCode:
+                - 200
+                - 429
+      - function: "mediumThink"
+
+  # Scenario 2: Admin manages conversations
+  - name: "Admin Dashboard Usage"
+    weight: 20
+    flow:
+      - function: "generateRandomWorkspaceId"
+      # Check health
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+      - function: "shortThink"
+      # View conversations
+      - get:
+          url: "/api/conversations"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          qs:
+            workspaceId: "{{ workspaceId }}"
+            limit: 50
+          expect:
+            - statusCode: 200
+      - function: "mediumThink"
+      # View specific conversation
+      - get:
+          url: "/api/conversations/test-conversation-{{ $randomNumber(1, 100) }}/messages"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+      - function: "shortThink"
+      # Reply to customer
+      - function: "generateRandomMessage"
+      - post:
+          url: "/api/conversations/test-conversation-{{ $randomNumber(1, 100) }}/messages"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            content: "Thank you for reaching out. {{ randomMessage }}"
+            role: "assistant"
+          expect:
+            - statusCode: 201
+
+  # Scenario 3: Document processing workflow
+  - name: "Document Upload & Process"
+    weight: 15
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomDocumentName"
+      # Trigger processing
+      - post:
+          url: "/api/documents/process"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            documentId: "multitenant-doc-{{ $randomNumber(1, 1000) }}"
+            workspaceId: "{{ workspaceId }}"
+          expect:
+            - statusCode:
+                - 200
+                - 500
+      - function: "longThink"
+
+  # Scenario 4: RAG search usage
+  - name: "Knowledge Base Search"
+    weight: 10
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomMessage"
+      # Multiple searches
+      - loop:
+          - post:
+              url: "/api/chat/completions"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+                Content-Type: "application/json"
+              json:
+                message: "{{ randomMessage }}"
+                workspaceId: "{{ workspaceId }}"
+                conversationId: "search-session-{{ $randomNumber(1, 50) }}"
+                useRag: true
+              expect:
+                - statusCode:
+                    - 200
+                    - 429
+          - function: "shortThink"
+        count: 3
+
+  # Scenario 5: High-volume widget traffic
+  - name: "Widget Traffic Burst"
+    weight: 5
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - loop:
+          - function: "generateRandomMessage"
+          - post:
+              url: "/api/conversations/burst-conversation-{{ $randomNumber(1, 500) }}/messages"
+              headers:
+                Content-Type: "application/json"
+                X-Workspace-ID: "{{ workspaceId }}"
+              json:
+                content: "{{ randomMessage }}"
+                role: "user"
+              expect:
+                - statusCode: 201
+          - function: "shortThink"
+        count: 5

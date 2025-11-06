@@ -73,9 +73,47 @@ async function verifyPinecone() {
       const namespaceCount = Object.keys(stats.namespaces).length;
       console.log(`\n📁 Namespaces (${namespaceCount}):`);
 
-      Object.entries(stats.namespaces).forEach(([ns, data]) => {
-        console.log(`   - ${ns}: ${data.recordCount} vectores`);
-      });
+      // Ordenar por número de vectores (descendente)
+      const sortedNamespaces = Object.entries(stats.namespaces).sort(
+        ([, a], [, b]) => (b.recordCount || 0) - (a.recordCount || 0)
+      );
+
+      for (const [ns, data] of sortedNamespaces) {
+        console.log(`\n   🗂️  ${ns}`);
+        console.log(`      Vectores: ${data.recordCount}`);
+
+        // Resaltar workspaces conocidos
+        if (ns.toLowerCase().includes('ismael') || ns.toLowerCase() === 'ismael') {
+          console.log(`      ⭐ Workspace "Ismael" detectado`);
+        }
+        if (ns.toLowerCase().includes('test') || ns.toLowerCase() === 'test') {
+          console.log(`      ⭐ Workspace "Test" detectado`);
+        }
+
+        // Hacer query de sample para ver IDs de vectores (solo si hay vectores)
+        if (data.recordCount && data.recordCount > 0) {
+          try {
+            const sampleQuery = await index.namespace(ns).query({
+              vector: new Array(1024).fill(0),  // Vector dummy
+              topK: 5,
+              includeMetadata: true
+            });
+
+            if (sampleQuery.matches && sampleQuery.matches.length > 0) {
+              console.log(`      📄 Sample de vectores (primeros ${sampleQuery.matches.length}):`);
+              sampleQuery.matches.forEach((match, i) => {
+                const docId = match.metadata?.documentId || 'unknown';
+                const filename = match.metadata?.filename || 'unknown';
+                console.log(`         ${i + 1}. ${match.id}`);
+                console.log(`            Document ID: ${docId}`);
+                console.log(`            Filename: ${filename}`);
+              });
+            }
+          } catch (sampleError: any) {
+            console.log(`      ⚠️  No se pudo obtener sample: ${sampleError.message}`);
+          }
+        }
+      }
     } else {
       console.log(`\n📁 Namespaces: 0 (índice vacío)`);
     }

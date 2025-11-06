@@ -28,8 +28,8 @@ export function Settings() {
 
   // Configuraciones de notificaciones específicas
   const [eventNotifications, setEventNotifications] = useState(true);
-  const [dailyGospelNotifications, setDailyGospelNotifications] = useState(true);
-  const [saintNotifications, setSaintNotifications] = useState(true);
+  const [dailyUpdatesNotifications, setDailyUpdatesNotifications] = useState(true);
+  const [tipsNotifications, setTipsNotifications] = useState(true);
 
   useEffect(() => {
     // Use queueMicrotask to avoid synchronous setState in effect
@@ -42,12 +42,12 @@ export function Settings() {
 
       // Cargar preferencias desde localStorage
       const savedEventNotifs = localStorage.getItem('notifications_events');
-      const savedGospelNotifs = localStorage.getItem('notifications_gospel');
-      const savedSaintNotifs = localStorage.getItem('notifications_saints');
+      const savedDailyUpdatesNotifs = localStorage.getItem('notifications_daily_updates');
+      const savedTipsNotifs = localStorage.getItem('notifications_tips');
 
       if (savedEventNotifs !== null) setEventNotifications(savedEventNotifs === 'true');
-      if (savedGospelNotifs !== null) setDailyGospelNotifications(savedGospelNotifs === 'true');
-      if (savedSaintNotifs !== null) setSaintNotifications(savedSaintNotifs === 'true');
+      if (savedDailyUpdatesNotifs !== null) setDailyUpdatesNotifications(savedDailyUpdatesNotifs === 'true');
+      if (savedTipsNotifs !== null) setTipsNotifications(savedTipsNotifs === 'true');
     });
   }, []);
 
@@ -66,19 +66,19 @@ export function Settings() {
     }
   };
 
-  const handleToggleNotification = (type: 'events' | 'gospel' | 'saints', value: boolean) => {
+  const handleToggleNotification = (type: 'events' | 'daily_updates' | 'tips', value: boolean) => {
     switch (type) {
       case 'events':
         setEventNotifications(value);
         localStorage.setItem('notifications_events', String(value));
         break;
-      case 'gospel':
-        setDailyGospelNotifications(value);
-        localStorage.setItem('notifications_gospel', String(value));
+      case 'daily_updates':
+        setDailyUpdatesNotifications(value);
+        localStorage.setItem('notifications_daily_updates', String(value));
         break;
-      case 'saints':
-        setSaintNotifications(value);
-        localStorage.setItem('notifications_saints', String(value));
+      case 'tips':
+        setTipsNotifications(value);
+        localStorage.setItem('notifications_tips', String(value));
         break;
     }
   };
@@ -287,14 +287,14 @@ export function Settings() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggleNotification('gospel', !dailyGospelNotifications)}
+                  onClick={() => handleToggleNotification('daily_updates', !dailyUpdatesNotifications)}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
-                    dailyGospelNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
+                    dailyUpdatesNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
                   <div
                     className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
-                      dailyGospelNotifications ? 'translate-x-6' : ''
+                      dailyUpdatesNotifications ? 'translate-x-6' : ''
                     }`}
                   />
                 </button>
@@ -316,14 +316,14 @@ export function Settings() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggleNotification('saints', !saintNotifications)}
+                  onClick={() => handleToggleNotification('tips', !tipsNotifications)}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
-                    saintNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
+                    tipsNotifications ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
                   }`}
                 >
                   <div
                     className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
-                      saintNotifications ? 'translate-x-6' : ''
+                      tipsNotifications ? 'translate-x-6' : ''
                     }`}
                   />
                 </button>

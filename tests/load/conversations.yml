@@ -1,0 +1,107 @@
+# Conversations API Load Test
+# Tests the /api/conversations/[id]/messages endpoint
+#
+# This endpoint:
+# - Creates messages in conversations
+# - Sends email notifications to admins
+# - Updates conversation metadata
+# - Used by the embeddable widget
+#
+# Usage:
+#   npm run test:load:conversations
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm-up
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up"
+    # Normal widget usage
+    - duration: 120
+      arrivalRate: 10
+      name: "Normal widget traffic"
+    # Peak hours (many customers using widget)
+    - duration: 180
+      arrivalRate: 10
+      rampTo: 30
+      name: "Peak widget traffic"
+    # Sustained peak
+    - duration: 120
+      arrivalRate: 30
+      name: "Sustained peak"
+    # Cool down
+    - duration: 60
+      arrivalRate: 30
+      rampTo: 5
+      name: "Cool down"
+  processor: "./load-test-helpers.js"
+  plugins:
+    expect: {}
+  variables:
+    authToken: "{{ $processEnvironment.TEST_AUTH_TOKEN }}"
+  ensure:
+    maxErrorRate: 2      # Max 2% error rate
+    p95: 3000            # P95 < 3s
+    p99: 8000            # P99 < 8s
+
+scenarios:
+  - name: "Customer Message (Widget)"
+    weight: 80
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomMessage"
+      - post:
+          url: "/api/conversations/test-conversation-{{ $randomNumber(1, 100) }}/messages"
+          headers:
+            Content-Type: "application/json"
+            X-Workspace-ID: "{{ workspaceId }}"
+          json:
+            content: "{{ randomMessage }}"
+            role: "user"
+            metadata:
+              customerName: "Test Customer {{ $randomNumber(1, 1000) }}"
+              customerEmail: "customer-{{ $randomNumber(1, 1000) }}@example.com"
+          expect:
+            - statusCode: 201
+            - contentType: json
+            - hasProperty: id
+            - hasProperty: content
+          capture:
+            - json: "$.id"
+              as: "messageId"
+      - log: "Message created: {{ messageId }}"
+      - function: "shortThink"
+
+  - name: "Agent Response"
+    weight: 15
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - post:
+          url: "/api/conversations/test-conversation-{{ $randomNumber(1, 100) }}/messages"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            content: "Thank you for your message. How can I help you today?"
+            role: "assistant"
+          expect:
+            - statusCode: 201
+            - contentType: json
+      - function: "mediumThink"
+
+  - name: "Get Conversation Messages"
+    weight: 5
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - get:
+          url: "/api/conversations/test-conversation-{{ $randomNumber(1, 100) }}/messages"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          capture:
+            - json: "$.length"
+              as: "messageCount"
+      - log: "Conversation has {{ messageCount }} messages"

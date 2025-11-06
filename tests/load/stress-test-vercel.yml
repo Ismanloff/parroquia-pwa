@@ -1,0 +1,139 @@
+# Stress Test - Finding Breaking Points
+# Tests system under progressively increasing load until failure
+#
+# Objectives:
+# - Find maximum throughput (req/s)
+# - Identify bottlenecks
+# - Test rate limiting under extreme load
+# - Document degradation points
+#
+# Usage:
+#   TEST_TARGET_URL=https://resply-dnlpb3tk1-chatbot-parros-projects.vercel.app npm run test:stress
+#   TEST_TARGET_URL=https://resply.vercel.app npm run test:stress
+
+config:
+  target: "https://resply-dnlpb3tk1-chatbot-parros-projects.vercel.app"
+  phases:
+    # Phase 1: Baseline (warm-up)
+    - duration: 30
+      arrivalRate: 10
+      name: "Phase 1: Baseline (10 req/s)"
+
+    # Phase 2: Moderate load
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 30
+      name: "Phase 2: Moderate (30 req/s)"
+
+    # Phase 3: High load
+    - duration: 60
+      arrivalRate: 30
+      rampTo: 60
+      name: "Phase 3: High (60 req/s)"
+
+    # Phase 4: Very high load
+    - duration: 60
+      arrivalRate: 60
+      rampTo: 100
+      name: "Phase 4: Very High (100 req/s)"
+
+    # Phase 5: Extreme load (stress point)
+    - duration: 60
+      arrivalRate: 100
+      rampTo: 150
+      name: "Phase 5: Extreme (150 req/s)"
+
+    # Phase 6: Breaking point test
+    - duration: 30
+      arrivalRate: 150
+      rampTo: 200
+      name: "Phase 6: Breaking Point (200 req/s)"
+
+    # Phase 7: Cool down
+    - duration: 30
+      arrivalRate: 200
+      rampTo: 10
+      name: "Phase 7: Cool Down"
+
+  processor: "./load-test-helpers.js"
+  plugins:
+    expect: {}
+    metrics-by-endpoint:
+      stripQueryString: true
+
+  # More relaxed thresholds for stress testing
+  ensure:
+    maxErrorRate: 30    # Allow 30% errors under extreme load
+    p95: 10000          # P95 < 10s (degradation expected)
+    p99: 20000          # P99 < 20s
+
+scenarios:
+  # Scenario 1: Health Check (50%)
+  # Lightweight endpoint to measure raw throughput
+  - name: "Health Check Stress"
+    weight: 50
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode:
+                - 200
+                - 429  # Rate limit expected
+                - 503  # Service degradation expected
+          capture:
+            - json: "$.status"
+              as: "healthStatus"
+      - function: "shortThink"
+
+  # Scenario 2: Widget Chat (30%)
+  # Test rate limiting on widget endpoint
+  - name: "Widget Chat Stress"
+    weight: 30
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomMessage"
+      - post:
+          url: "/api/chat/widget"
+          headers:
+            Content-Type: "application/json"
+            Origin: "https://resply-dnlpb3tk1-chatbot-parros-projects.vercel.app"
+            Referer: "https://resply-dnlpb3tk1-chatbot-parros-projects.vercel.app/"
+            X-Workspace-ID: "{{ workspaceId }}"
+          json:
+            message: "{{ randomMessage }}"
+            workspaceId: "{{ workspaceId }}"
+            stream: false
+          expect:
+            - statusCode:
+                - 200
+                - 400
+                - 429  # Rate limit (60/min expected)
+                - 500
+                - 503
+          capture:
+            - json: "$.response"
+              as: "aiResponse"
+      - function: "mediumThink"
+
+  # Scenario 3: Auth Login (20%)
+  # Test rate limiting on auth endpoint
+  - name: "Auth Login Stress"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          headers:
+            Content-Type: "application/json"
+            Origin: "https://resply-dnlpb3tk1-chatbot-parros-projects.vercel.app"
+            Referer: "https://resply-dnlpb3tk1-chatbot-parros-projects.vercel.app/"
+          json:
+            email: "test-{{ $randomNumber(1, 10000) }}@example.com"
+            password: "testpassword123"
+          expect:
+            - statusCode:
+                - 400
+                - 401
+                - 429  # Rate limit (5/min expected)
+                - 500
+                - 503
+      - function: "shortThink"

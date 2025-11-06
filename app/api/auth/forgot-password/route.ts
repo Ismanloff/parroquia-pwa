@@ -52,13 +52,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obtener nombre del perfil
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single() as { data: { full_name: string } | null };
-
     // Generar enlace de recuperación
     const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
@@ -74,7 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Enviar email de recuperación con Resend
-    const userName = profile?.full_name || email.split('@')[0];
+    const userName = email.split('@')[0];
     const emailTemplate = passwordResetEmailTemplate({
       userName,
       resetUrl: resetData.properties.action_link
@@ -84,7 +77,7 @@ export async function POST(req: NextRequest) {
       await resend.emails.send({
         from: FROM_EMAIL,
         to: email,
-        subject: 'Restablecer contraseña - APP PARRO',
+        subject: 'Restablecer contraseña - Resply',
         html: emailTemplate.html,
         text: emailTemplate.text,
       });

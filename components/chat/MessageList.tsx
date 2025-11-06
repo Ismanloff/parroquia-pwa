@@ -14,7 +14,6 @@ interface MessageListProps {
 
 export function MessageList({
   messages,
-  isLoading,
   streamingStatus,
   onQuickAction,
 }: MessageListProps) {

@@ -30,7 +30,6 @@ export class RateLimiter {
   static async checkRateLimit(config: RateLimitConfig): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
     const key = `rate_limit:${config.identifier}`;
     const now = Date.now();
-    const windowStart = now - config.windowMs;
 
     try {
       // Obtener contador actual
@@ -72,7 +71,6 @@ export class RateLimiter {
 export class CircuitBreaker {
   private static readonly FAILURE_THRESHOLD = 5; // Fallos para abrir circuito
   private static readonly TIMEOUT_MS = 60000; // 1 minuto en estado "open"
-  private static readonly HALF_OPEN_MAX_REQUESTS = 3; // Requests en "half-open"
 
   /**
    * Circuit Breaker para OpenAI API

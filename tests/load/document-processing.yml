@@ -1,0 +1,99 @@
+# Document Processing Load Test
+# Tests the /api/documents/process endpoint
+#
+# This endpoint is resource-intensive:
+# - Downloads files from storage
+# - Extracts text (PDF/DOCX)
+# - Generates embeddings (Voyage AI)
+# - Upserts to Pinecone
+# - Max duration: 300 seconds
+#
+# Usage:
+#   npm run test:load:documents
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Low concurrent processing
+    - duration: 120
+      arrivalRate: 1
+      name: "Low load (1 doc/s)"
+    # Medium concurrent processing
+    - duration: 180
+      arrivalRate: 1
+      rampTo: 3
+      name: "Medium load (3 docs/s)"
+    # Sustained medium load
+    - duration: 300
+      arrivalRate: 3
+      name: "Sustained (3 docs/s)"
+  processor: "./load-test-helpers.js"
+  plugins:
+    expect: {}
+  variables:
+    authToken: "{{ $processEnvironment.TEST_AUTH_TOKEN }}"
+  ensure:
+    maxErrorRate: 10      # Allow 10% errors (processing can fail)
+    p95: 60000            # P95 < 60s
+    p99: 180000           # P99 < 3 minutes
+
+scenarios:
+  - name: "Process Small Document"
+    weight: 60
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomDocumentName"
+      - post:
+          url: "/api/documents/process"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            documentId: "test-doc-small-{{ $randomNumber(1, 1000) }}"
+            workspaceId: "{{ workspaceId }}"
+          expect:
+            - statusCode:
+                - 200
+                - 500  # Processing errors are tracked
+            - contentType: json
+          capture:
+            - json: "$.chunks"
+              as: "chunkCount"
+      - log: "Processed {{ chunkCount }} chunks"
+      - function: "longThink"
+
+  - name: "Process Medium Document"
+    weight: 30
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - post:
+          url: "/api/documents/process"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            documentId: "test-doc-medium-{{ $randomNumber(1, 500) }}"
+            workspaceId: "{{ workspaceId }}"
+          expect:
+            - statusCode:
+                - 200
+                - 500
+      - function: "longThink"
+
+  - name: "Process Large Document"
+    weight: 10
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - post:
+          url: "/api/documents/process"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            documentId: "test-doc-large-{{ $randomNumber(1, 100) }}"
+            workspaceId: "{{ workspaceId }}"
+          expect:
+            - statusCode:
+                - 200
+                - 500
+      - function: "longThink"

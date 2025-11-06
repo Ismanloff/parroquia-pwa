@@ -91,6 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return () => subscription.unsubscribe();
     }
+
+    // Return undefined explicitly for TypeScript
+    return undefined;
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {

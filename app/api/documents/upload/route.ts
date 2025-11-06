@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/app/lib/supabase';
+// FASE 1: Security imports
+import { validateFileType } from '@/lib/schemas';
+import { validateFileSignature } from '@/lib/security/file-validator';
+// FASE 3: Audit logging
+import { logCreate, ResourceType } from '@/lib/audit';
 
 export const runtime = 'nodejs'; // Need Node runtime for file handling
-
-// Allowed file types
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
-];
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,18 +48,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    // 🛡️ FASE 1: Validación de tipo y tamaño con Zod schema
+    const fileValidation = validateFileType(file);
+    if (!fileValidation.valid) {
+      console.warn(`❌ File validation failed:`, fileValidation.error);
       return NextResponse.json(
-        { error: 'Tipo de archivo no permitido. Solo PDF, DOC, DOCX y TXT' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: 'El archivo es muy grande. Máximo 10MB' },
+        { error: fileValidation.error },
         { status: 400 }
       );
     }
@@ -88,13 +77,37 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // 🔒 SECURITY FIX #3: Validate file signature (magic numbers)
+    const signatureValidation = validateFileSignature(buffer, file.type, file.name);
+    if (!signatureValidation.valid) {
+      console.warn(`❌ File signature validation failed:`, {
+        filename: file.name,
+        claimedType: file.type,
+        error: signatureValidation.error,
+        detectedType: signatureValidation.detectedType,
+      });
+      return NextResponse.json(
+        {
+          error: signatureValidation.error || 'Archivo inválido',
+          details: signatureValidation.details,
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log(`✅ File signature validated:`, {
+      filename: file.name,
+      type: file.type,
+      detectedType: signatureValidation.detectedType,
+    });
+
     // Generate unique filename
     const timestamp = Date.now();
     const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${workspaceId}/${timestamp}_${sanitizedFilename}`;
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from('documents')
       .upload(filename, buffer, {
         contentType: file.type,
@@ -143,11 +156,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // AUDIT: Log document creation
+    await logCreate(
+      ResourceType.DOCUMENT,
+      document.id,
+      user.id,
+      workspaceId,
+      {
+        filename: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+      }
+    );
+
     // Trigger document processing asynchronously (don't await)
     fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/documents/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documentId: document.id }),
+      body: JSON.stringify({
+        documentId: document.id,
+        workspaceId: workspaceId,
+      }),
     }).catch(err => console.error('Error triggering document processing:', err));
 
     return NextResponse.json(

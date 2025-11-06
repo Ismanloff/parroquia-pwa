@@ -13,6 +13,13 @@
 # testing
 /coverage
 
+# Artillery load testing results
+tests/load/.env.load-test
+tests/load/report.json
+tests/load/*.json
+load-test-report.html
+report.json
+
 # next.js
 /.next/
 /out/
@@ -32,6 +39,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+*.env.local
+*.env.production
+*.env.development
 
 # vercel
 .vercel
@@ -61,3 +72,17 @@ backups/
 *.sql
 *.sql.gz
 DISASTER_RECOVERY_PLAN.md
+
+# MCP Servers - Credentials
+../mcp-servers/*/.env
+!../mcp-servers/*/.env.example
+
+# Scripts with credentials (cleaned)
+apply-migrations.mjs
+list-tables-pg.js
+setup-exec-sql-function.sql
+
+# Test files (temporary)
+test-rag-caching*.mjs
+test-rag-caching*.json
+test-conversacion*.mjs

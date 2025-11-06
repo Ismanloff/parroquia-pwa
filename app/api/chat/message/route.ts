@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { z } from "zod";
-import { semanticCache } from '../utils/semanticCache';
 import { StructuredLogger } from '../utils/structuredLogger';
 import { searchResources } from '../tools/resourcesTool';
+import { MESSAGE_STATIC_INSTRUCTIONS, FUNCTION_DEFINITIONS } from '../config/promptConstants';
+import { monitorPromptCache } from '../utils/promptCacheMonitor';
+// FASE 1: Security imports
+import { validateMessage } from '@/lib/schemas';
+import { detectPII } from '@/lib/security/pii-detector';
+// FASE 2: Advanced AI Security
+import { detectPromptInjection } from '@/lib/security/prompt-injection-detector';
+import { detectJailbreak } from '@/lib/security/jailbreak-detector';
 
 // Importar la lógica de calendar tool
 import ICAL from 'ical.js';
@@ -146,80 +152,17 @@ const MAX_HISTORY_MESSAGES = 15;
 
 const agentModel = process.env.OPENAI_AGENT_MODEL || "gpt-4o-mini";
 
-// ⚡ INSTRUCCIONES OPTIMIZADAS: Concisas para máxima velocidad (< 3s)
-const AGENT_INSTRUCTIONS = `Asistente de soporte empresarial. Responde breve y claro.
-
-TOOLS: get_calendar_events, get_resources (copia COMPLETO a attachments)
-
-REGLAS CRÍTICAS:
-- Usa tools, no adivines
-- Formularios/recursos → get_resources + copia a attachments
-- Casos complejos → deriva a soporte especializado
-- Tono profesional y amable
-
-⚠️ COHERENCIA: Mantén el foco
-- Responde específicamente lo que el usuario pregunta
-- NO agregues información no solicitada
-- Sé directo y conciso`;
+// ⚡ INSTRUCCIONES OPTIMIZADAS: Importadas desde config/promptConstants.ts
+// 🎯 PROMPT CACHING: Las instrucciones estáticas se cachean automáticamente (> 1024 tokens)
+// Ver: MESSAGE_STATIC_INSTRUCTIONS en config/promptConstants.ts
 
 // ⚡ CONFIGURACIÓN DE RUNTIME: Extender timeout de Edge Function
 export const runtime = 'nodejs'; // Usar Node.js runtime (no Edge) para mayor timeout
 export const maxDuration = 60; // 60 segundos máximo (Pro plan)
 
-// ⚡ FUNCTION DEFINITIONS para OpenAI Function Calling (OPTIMIZADO: descripciones ultra-cortas)
-const FUNCTIONS = [
-  {
-    type: "function" as const,
-    function: {
-      name: "get_calendar_events",
-      description: "Obtiene eventos del calendario empresarial por fecha/periodo.",
-      parameters: {
-        type: "object",
-        properties: {
-          timeframe: {
-            type: "string",
-            enum: ['upcoming', 'today', 'tomorrow', 'week', 'weekend', 'next_week', 'month', 'custom'],
-            description: "El periodo de tiempo para buscar eventos"
-          },
-          limit: {
-            type: "number",
-            nullable: true,
-            default: 10,
-            description: "Número máximo de eventos a devolver"
-          },
-          startDate: {
-            type: "string",
-            nullable: true,
-            description: "Fecha de inicio para búsqueda custom (formato ISO)"
-          },
-          endDate: {
-            type: "string",
-            nullable: true,
-            description: "Fecha de fin para búsqueda custom (formato ISO)"
-          },
-        },
-        required: ["timeframe"],
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_resources",
-      description: "Busca formularios, PDFs y documentos empresariales.",
-      parameters: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "La consulta o tema del usuario para buscar recursos relacionados"
-          },
-        },
-        required: ["query"],
-      },
-    },
-  },
-];
+// ⚡ FUNCTION DEFINITIONS: Importadas desde config/promptConstants.ts
+// 🎯 PROMPT CACHING: Las definiciones de funciones se cachean automáticamente
+// Ver: FUNCTION_DEFINITIONS en config/promptConstants.ts
 
 // 4. Handler de la API para procesar los mensajes
 export async function POST(request: NextRequest) {
@@ -228,15 +171,120 @@ export async function POST(request: NextRequest) {
 
   try {
     // Extraer mensaje e historial del frontend
-    const { message, conversationHistory: clientHistory } = await request.json();
+    const body = await request.json();
+    const { message, conversationHistory: clientHistory } = body;
 
     console.log(`📨 [${requestId}] Mensaje recibido:`, message);
     console.log(`📚 [${requestId}] Historial length:`, clientHistory?.length || 0);
 
     sendDebugLog('info', 'Request recibida en backend', {
-      message: message.substring(0, 100),
+      message: message?.substring(0, 100),
       historyLength: clientHistory?.length || 0,
     }, requestId);
+
+    // 🛡️ FASE 1: Validación con Zod
+    const validation = validateMessage({
+      content: message,
+      conversationId: body.conversationId || crypto.randomUUID(), // Temporal para este endpoint
+      metadata: {
+        clientTimestamp: new Date().toISOString(),
+        source: 'dashboard',
+        requestId,
+      },
+    });
+
+    if (!validation.success) {
+      console.log(`❌ [${requestId}] Validación fallida:`, validation.error);
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: validation.error,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 🛡️ FASE 1: Detección de PII
+    const piiCheck = detectPII(message);
+    if (piiCheck.hasPII) {
+      console.warn(`⚠️ [${requestId}] PII detectada en mensaje:`, {
+        types: piiCheck.findings.map(f => f.type),
+        count: piiCheck.findings.length,
+      });
+
+      StructuredLogger.guardrailTriggered({
+        requestId,
+        guardrailType: 'pii_detection',
+        guardrailName: 'PII Detector',
+        reason: `Detected ${piiCheck.findings.length} PII instances: ${piiCheck.findings.map(f => f.type).join(', ')}`,
+        message: message,
+      });
+
+      // Por ahora solo loggeamos, no bloqueamos
+      // En FASE 3 con GDPR completo, podríamos bloquear o redactar
+    }
+
+    // 🛡️ FASE 2: Detección de Prompt Injection
+    const injectionCheck = detectPromptInjection(message);
+    if (injectionCheck.isInjection) {
+      console.warn(`⚠️ [${requestId}] Prompt injection detectada:`, {
+        confidence: injectionCheck.confidence,
+        patterns: injectionCheck.patterns.length,
+      });
+
+      StructuredLogger.guardrailTriggered({
+        requestId,
+        guardrailType: 'prompt_injection',
+        guardrailName: 'Prompt Injection Detector',
+        reason: injectionCheck.reason || `Confidence: ${(injectionCheck.confidence * 100).toFixed(0)}%`,
+        message: message,
+      });
+
+      // Bloquear si confianza > 80%
+      if (injectionCheck.confidence >= 0.8) {
+        return NextResponse.json({
+          message: 'Lo siento, tu mensaje contiene patrones que no puedo procesar por razones de seguridad.',
+          attachments: null,
+          fromCache: false,
+          guardrail: 'prompt_injection',
+        }, {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'X-Request-ID': requestId,
+          },
+        });
+      }
+    }
+
+    // 🛡️ FASE 2: Detección de Jailbreaking
+    const jailbreakCheck = detectJailbreak(message);
+    if (jailbreakCheck.isJailbreak) {
+      console.warn(`⚠️ [${requestId}] Jailbreak attempt detectado:`, {
+        confidence: jailbreakCheck.confidence,
+        techniques: jailbreakCheck.techniques.map(t => t.name),
+      });
+
+      StructuredLogger.guardrailTriggered({
+        requestId,
+        guardrailType: 'jailbreak',
+        guardrailName: 'Jailbreak Detector',
+        reason: jailbreakCheck.reason || `Techniques: ${jailbreakCheck.techniques.map(t => t.name).join(', ')}`,
+        message: message,
+      });
+
+      // Bloquear siempre jailbreaks (threshold ya es 0.5, muy conservador)
+      return NextResponse.json({
+        message: 'Lo siento, no puedo procesar ese tipo de solicitud.',
+        attachments: null,
+        fromCache: false,
+        guardrail: 'jailbreak',
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'X-Request-ID': requestId,
+        },
+      });
+    }
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -311,9 +359,10 @@ export async function POST(request: NextRequest) {
     // 🚀 OPTIMIZACIÓN: Context trimming
     const trimmedHistory = (clientHistory || []).slice(-MAX_HISTORY_MESSAGES);
 
-    // Convertir historial al formato OpenAI
+    // 🎯 PROMPT CACHING: Convertir historial al formato OpenAI
+    // Estructura optimizada: System prompt estático primero → se cachea
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: AGENT_INSTRUCTIONS },
+      { role: "system", content: MESSAGE_STATIC_INSTRUCTIONS },
       ...trimmedHistory.map((msg: { role: string, content: string }) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
@@ -326,11 +375,12 @@ export async function POST(request: NextRequest) {
     console.log('⚡ Ejecutando Function Calling optimizado...');
 
     // ⚡ PASO 1: Llamada inicial al modelo
+    // 🎯 PROMPT CACHING: Usar FUNCTION_DEFINITIONS desde config
     let response = await retryWithExponentialBackoff(
       () => openai.chat.completions.create({
         model: agentModel,
         messages,
-        functions: FUNCTIONS.map(f => f.function),
+        functions: FUNCTION_DEFINITIONS.map(f => f.function),
         function_call: "auto",
         temperature: 0.3,
         max_tokens: 200, // ⚡ Reducido para velocidad
@@ -338,6 +388,9 @@ export async function POST(request: NextRequest) {
       3,
       1000
     );
+
+    // 📊 MONITOREO: Loggear métricas de cache (primera llamada)
+    monitorPromptCache(response, 'message-initial');
 
     let finalMessage = response.choices[0]?.message;
     let toolResults: any[] = [];
@@ -512,11 +565,14 @@ export async function POST(request: NextRequest) {
       response = await openai.chat.completions.create({
         model: agentModel,
         messages,
-        functions: FUNCTIONS.map(f => f.function),
+        functions: FUNCTION_DEFINITIONS.map(f => f.function),
         function_call: "auto",
         temperature: 0.3,
         max_tokens: 200, // ⚡ Reducido para velocidad
       });
+
+      // 📊 MONITOREO: Loggear métricas de cache (iteración de tool)
+      monitorPromptCache(response, `message-tool-iter-${iterations}`);
 
       finalMessage = response.choices[0]?.message || finalMessage;
     }

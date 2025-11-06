@@ -1,81 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageSquare, Plus, Search, Filter, MoreVertical, User, Building2, Calendar, ExternalLink } from 'lucide-react';
+import { MessageSquare, Plus, Search, MoreVertical, User, Calendar, ExternalLink, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
-
-// Mock data - en producción vendría de Supabase
-const mockConversations = [
-  {
-    id: '1',
-    workspace_id: '1',
-    workspace_name: 'Acme Corporation',
-    user_email: 'john@example.com',
-    created_at: '2025-01-20T14:30:00Z',
-    updated_at: '2025-01-20T15:45:00Z',
-    messages_count: 12,
-    status: 'active',
-    last_message: '¿Cuál es el horario de misas este fin de semana?',
-  },
-  {
-    id: '2',
-    workspace_id: '2',
-    workspace_name: 'TechStart Inc',
-    user_email: 'sarah@techstart.com',
-    created_at: '2025-01-20T10:15:00Z',
-    updated_at: '2025-01-20T12:30:00Z',
-    messages_count: 8,
-    status: 'active',
-    last_message: 'Necesito información sobre el sacramento del bautismo',
-  },
-  {
-    id: '3',
-    workspace_id: '1',
-    workspace_name: 'Acme Corporation',
-    user_email: 'mike@acme.com',
-    created_at: '2025-01-19T16:20:00Z',
-    updated_at: '2025-01-19T16:45:00Z',
-    messages_count: 5,
-    status: 'closed',
-    last_message: 'Gracias por la información',
-  },
-  {
-    id: '4',
-    workspace_id: '3',
-    workspace_name: 'Global Solutions',
-    user_email: 'anna@global.com',
-    created_at: '2025-01-19T09:10:00Z',
-    updated_at: '2025-01-20T11:20:00Z',
-    messages_count: 15,
-    status: 'active',
-    last_message: '¿Cómo puedo participar en las actividades de la parroquia?',
-  },
-  {
-    id: '5',
-    workspace_id: '2',
-    workspace_name: 'TechStart Inc',
-    user_email: 'david@techstart.com',
-    created_at: '2025-01-18T13:45:00Z',
-    updated_at: '2025-01-18T14:00:00Z',
-    messages_count: 3,
-    status: 'closed',
-    last_message: 'Perfecto, muchas gracias',
-  },
-];
+import { useConversations } from '@/hooks/useConversations';
+import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 export default function ConversationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('all');
-  const [conversations] = useState(mockConversations);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'resolved' | 'closed'>('all');
+  const { activeWorkspaceId } = useWorkspace();
 
-  const filteredConversations = conversations.filter((conv) => {
-    const matchesSearch =
-      conv.workspace_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.user_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.last_message.toLowerCase().includes(searchQuery.toLowerCase());
+  // Use hook for conversations
+  const { conversations, isLoading, error, refresh } = useConversations(activeWorkspaceId);
+  const isConnected = true; // For now, always show as connected
+
+  const filteredConversations = conversations.filter((conv: any) => {
+    const matchesSearch = searchQuery.length === 0 ||
+      (conv.user_id?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (conv.channel?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || conv.status === statusFilter;
 
@@ -97,20 +44,53 @@ export default function ConversationsPage() {
 
   return (
     <div className="p-6 sm:p-8">
-      {/* Header */}
+      {/* Breadcrumbs Navigation */}
+      <Breadcrumbs />
+
+      {/* Header with Real-time Status */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Conversaciones
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+              Conversaciones
+            </h1>
+            {/* Real-time Connection Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800">
+              {isConnected ? (
+                <>
+                  <Wifi className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
+                  <span className="text-xs font-medium text-green-700 dark:text-green-300">
+                    Live
+                  </span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs font-medium text-slate-500">
+                    Offline
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
           <p className="text-slate-600 dark:text-slate-400">
-            Monitorea todas las conversaciones del sistema
+            Monitorea todas las conversaciones en tiempo real
           </p>
         </div>
-        <Button variant="primary" className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Nueva Conversación
-        </Button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            disabled={isLoading}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh conversations"
+          >
+            <RefreshCw className={`w-5 h-5 text-slate-600 dark:text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <Button variant="primary" className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Nueva Conversación
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -138,14 +118,24 @@ export default function ConversationsPage() {
               Todas
             </button>
             <button
-              onClick={() => setStatusFilter('active')}
+              onClick={() => setStatusFilter('open')}
               className={`px-4 py-2 rounded-xl font-medium transition-colors ${
-                statusFilter === 'active'
+                statusFilter === 'open'
                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
-              Activas
+              Abiertas
+            </button>
+            <button
+              onClick={() => setStatusFilter('resolved')}
+              className={`px-4 py-2 rounded-xl font-medium transition-colors ${
+                statusFilter === 'resolved'
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              Resueltas
             </button>
             <button
               onClick={() => setStatusFilter('closed')}
@@ -161,8 +151,36 @@ export default function ConversationsPage() {
         </div>
       </Card>
 
+      {/* Error State */}
+      {error && (
+        <Card className="p-6 mb-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+              <WifiOff className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-red-900 dark:text-red-100">
+                Connection Error
+              </h3>
+              <p className="text-xs text-red-700 dark:text-red-300">
+                {error}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Conversations List */}
-      {filteredConversations.length > 0 ? (
+      {isLoading ? (
+        <Card className="p-8">
+          <div className="flex items-center justify-center">
+            <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
+            <span className="ml-3 text-slate-600 dark:text-slate-400">
+              Loading conversations...
+            </span>
+          </div>
+        </Card>
+      ) : filteredConversations.length > 0 ? (
         <div className="space-y-4">
           {filteredConversations.map((conversation) => (
             <Card
@@ -182,7 +200,13 @@ export default function ConversationsPage() {
                           {conversation.workspace_name}
                         </h3>
                         <Badge
-                          variant={conversation.status === 'active' ? 'success' : 'default'}
+                          variant={
+                            conversation.status === 'open' || conversation.status === 'assigned'
+                              ? 'success'
+                              : conversation.status === 'resolved'
+                              ? 'warning'
+                              : 'default'
+                          }
                           size="sm"
                         >
                           {conversation.status}
@@ -256,9 +280,9 @@ export default function ConversationsPage() {
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Activas</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Abiertas</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {conversations.filter((c) => c.status === 'active').length}
+            {conversations.filter((c) => c.status === 'open' || c.status === 'assigned').length}
           </p>
         </Card>
         <Card className="p-4">
@@ -270,7 +294,7 @@ export default function ConversationsPage() {
         <Card className="p-4">
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Total Mensajes</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {conversations.reduce((acc, c) => acc + c.messages_count, 0)}
+            {conversations.reduce((acc, c) => acc + (c.messages_count || 0), 0)}
           </p>
         </Card>
       </div>

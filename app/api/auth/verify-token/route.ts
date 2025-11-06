@@ -31,24 +31,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obtener perfil
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-    }
-
     return NextResponse.json(
       {
         success: true,
         user: {
           id: data.user.id,
           email: data.user.email,
-          ...(profile || {}),
         },
       },
       { status: 200 }

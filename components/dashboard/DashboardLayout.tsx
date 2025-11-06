@@ -12,12 +12,13 @@ import {
   Settings,
   Menu,
   X,
-  LogOut,
-  User,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { TrialBanner } from './TrialBanner';
+import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -43,6 +44,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const pathname = usePathname();
   const { user } = useAuth();
+
+  // Global keyboard shortcuts
+  const { isHelpOpen, closeHelp } = useGlobalShortcuts();
+
+  // cmd+b - Toggle sidebar
+  useKeyboardShortcut('cmd+b', () => {
+    setSidebarOpen((prev) => !prev);
+  });
 
   // Fetch user's workspace ID
   useEffect(() => {
@@ -179,6 +188,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Page Content */}
         <main className="min-h-[calc(100vh-4rem)]">{children}</main>
       </div>
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp isOpen={isHelpOpen} onClose={closeHelp} />
     </div>
   );
 }

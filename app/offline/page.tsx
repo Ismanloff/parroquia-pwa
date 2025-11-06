@@ -1,6 +1,6 @@
 'use client';
 
-import { WifiOff, RefreshCw, Home, BookOpen, Calendar, MessageCircle } from 'lucide-react';
+import { WifiOff, RefreshCw, Home, BookOpen, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 export default function OfflinePage() {

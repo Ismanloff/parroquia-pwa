@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resply Widget - Ejemplo de Instalación</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #667eea;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: #666;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 1rem 0;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .code-block code {
+      display: block;
+      white-space: pre;
+    }
+
+    .platform-section {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+      border-left: 4px solid #667eea;
+    }
+
+    .platform-section h3 {
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+
+    .note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+
+    .note strong {
+      color: #856404;
+    }
+
+    .demo-notice {
+      background: #d1fae5;
+      border-left: 4px solid #10b981;
+      padding: 15px;
+      margin: 2rem 0;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .demo-notice strong {
+      color: #047857;
+    }
+
+    ul {
+      margin-left: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Resply Widget <span class="badge">Demo</span></h1>
+    <p>Widget de chat embeddable para tu sitio web. Instalación en menos de 2 minutos.</p>
+
+    <div class="demo-notice">
+      <strong>👋 ¡El widget está activo en esta página!</strong><br>
+      Haz clic en el botón de chat en la esquina inferior derecha para probarlo.
+    </div>
+
+    <h2>📦 Instalación Rápida</h2>
+    <p>Copia y pega este código antes del cierre de la etiqueta <code>&lt;/body&gt;</code> en tu HTML:</p>
+
+    <div class="code-block">
+      <code>&lt;script src="https://resply.vercel.app/widget/resply-widget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  ResplyWidget.init({
+    workspaceId: 'TU_WORKSPACE_ID',
+    primaryColor: '#667eea',
+    position: 'bottom-right'
+  });
+&lt;/script&gt;</code>
+    </div>
+
+    <h2>⚙️ Configuración</h2>
+    <p>Opciones disponibles para personalizar el widget:</p>
+    <ul>
+      <li><strong>workspaceId</strong> (requerido): Tu ID de workspace desde el dashboard</li>
+      <li><strong>primaryColor</strong> (opcional): Color principal en formato hexadecimal (default: #667eea)</li>
+      <li><strong>position</strong> (opcional): 'bottom-right' o 'bottom-left' (default: bottom-right)</li>
+      <li><strong>apiUrl</strong> (opcional): URL de la API (default: https://resply.vercel.app)</li>
+    </ul>
+
+    <h2>🌐 Instalación por Plataforma</h2>
+
+    <div class="platform-section">
+      <h3>WordPress</h3>
+      <p><strong>Opción 1: Editor de temas</strong></p>
+      <ol>
+        <li>Ve a Apariencia → Editor de temas</li>
+        <li>Edita el archivo footer.php</li>
+        <li>Pega el código antes de <code>&lt;/body&gt;</code></li>
+      </ol>
+      <p><strong>Opción 2: Plugin</strong></p>
+      <ol>
+        <li>Instala el plugin "Insert Headers and Footers"</li>
+        <li>Ve a Settings → Insert Headers and Footers</li>
+        <li>Pega el código en "Scripts in Footer"</li>
+      </ol>
+    </div>
+
+    <div class="platform-section">
+      <h3>Shopify</h3>
+      <ol>
+        <li>Ve a Online Store → Themes</li>
+        <li>Haz clic en Actions → Edit code</li>
+        <li>Abre el archivo theme.liquid</li>
+        <li>Pega el código antes de <code>&lt;/body&gt;</code></li>
+        <li>Guarda los cambios</li>
+      </ol>
+    </div>
+
+    <div class="platform-section">
+      <h3>Webflow</h3>
+      <ol>
+        <li>Ve a Project Settings</li>
+        <li>Haz clic en la pestaña Custom Code</li>
+        <li>Pega el código en "Footer Code"</li>
+        <li>Publica tu sitio</li>
+      </ol>
+    </div>
+
+    <div class="platform-section">
+      <h3>React / Next.js</h3>
+      <p><strong>Opción 1: Componente con useEffect</strong></p>
+      <div class="code-block">
+        <code>useEffect(() => {
+  const script = document.createElement('script');
+  script.src = 'https://resply.vercel.app/widget/resply-widget.js';
+  script.async = true;
+  document.body.appendChild(script);
+
+  script.onload = () => {
+    (window as any).ResplyWidget.init({
+      workspaceId: 'TU_WORKSPACE_ID',
+      primaryColor: '#667eea',
+      position: 'bottom-right'
+    });
+  };
+
+  return () => {
+    document.body.removeChild(script);
+  };
+}, []);</code>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>💡 Nota:</strong> Reemplaza <code>TU_WORKSPACE_ID</code> con tu workspace ID real desde el dashboard de Resply.
+    </div>
+
+    <h2>🚀 Características</h2>
+    <ul>
+      <li>✅ Sin dependencias externas</li>
+      <li>✅ Responsive - funciona en móviles y escritorio</li>
+      <li>✅ Totalmente personalizable</li>
+      <li>✅ Ligero (~15KB)</li>
+      <li>✅ Compatible con todos los navegadores modernos</li>
+    </ul>
+
+    <h2>📞 Soporte</h2>
+    <p>¿Necesitas ayuda? Contacta con soporte o revisa la documentación completa en tu dashboard.</p>
+  </div>
+
+  <!-- WIDGET INSTALADO AQUÍ PARA LA DEMO -->
+  <script src="./resply-widget.js"></script>
+  <script>
+    ResplyWidget.init({
+      workspaceId: 'demo-workspace-id',
+      primaryColor: '#667eea',
+      position: 'bottom-right'
+    });
+  </script>
+</body>
+</html>

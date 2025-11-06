@@ -6,6 +6,7 @@ import { pineconeTool } from '../tools/pineconeTool';
 // import { detectQuickActions } from '../utils/quickActionsConfig';
 import Anthropic from '@anthropic-ai/sdk';
 import { setCurrentTenantId } from '@/lib/tenant-context';
+import { MESSAGE_STREAM_STATIC_INSTRUCTIONS } from '../config/promptConstants';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -166,59 +167,18 @@ function getConversationalResponse(type: 'greeting' | 'acknowledgment' | 'chitch
 const agentModel = process.env.OPENAI_AGENT_MODEL || "gpt-4o-mini";
 const agentName = process.env.AGENT_NAME || "Asistente de Atención al Cliente";
 
-// ⚡ INSTRUCCIONES OPTIMIZADAS (concisas para velocidad)
-const agentInstructions = `Asistente de atención al cliente con IA. Responde breve y claro.
-
-TOOLS: get_calendar_events, get_resources, search_parish_info
-
-⚠️ REGLA CRÍTICA: SIEMPRE USA search_parish_info PRIMERO
-- Para CUALQUIER pregunta sobre productos, servicios, precios, políticas, o información de la empresa
-- NUNCA NUNCA respondas de memoria - SIEMPRE busca en los documentos primero
-- Aunque creas saber la respuesta, USA search_parish_info para verificar
-
-Ejemplos que REQUIEREN search_parish_info:
-  * "Qué planes ofrecen?" → search_parish_info
-  * "Cuál es la política de reembolso?" → search_parish_info
-  * "Cómo funciona el servicio?" → search_parish_info
-  * "Precios y facturación" → search_parish_info
-  * "Horarios de soporte" → search_parish_info
-  * "Cómo me registro?" → search_parish_info
-  * "Qué funcionalidades tiene" → search_parish_info
-  * "Integraciones disponibles" → search_parish_info
-
-USO DE search_parish_info (Pinecone):
-- Usa search_parish_info para buscar en la base de conocimiento de la empresa
-- Para consultas sobre productos, servicios, precios, políticas, procedimientos, FAQ
-- Información sobre características, integraciones, soporte, facturación, etc.
-- Puedes filtrar por categoría: productos, servicios, precios, soporte, integraciones, políticas
-- Responde con la información de forma natural y directa
-- Esta herramienta es 80-90% más rápida que búsquedas tradicionales
-
-USO DE get_calendar_events:
-- Para eventos con fechas específicas: "eventos hoy", "webinars esta semana", "qué hay mañana"
-
-USO DE get_resources:
-- Para formularios de inscripción y enlaces directos a Typeform
-
-REGLAS CRÍTICAS:
-- Usa tools, no adivines información
-- Inscripciones/formularios → get_resources
-- Eventos/fechas → get_calendar_events
-- Info documentada → search_parish_info
-- Casos complejos → deriva al párroco
-- Tono acogedor y profesional
-
-⚠️ COHERENCIA: NO mezcles actividades distintas
-- Si preguntan por "Eloos" → habla SOLO de Eloos
-- Si preguntan por "Cáritas" → habla SOLO de Cáritas
-- NO agregues otras actividades solo porque ocurren el mismo día
-- Mantén el foco en lo que el usuario pregunta específicamente`;
+// ⚡ INSTRUCCIONES OPTIMIZADAS: Importadas desde config/promptConstants.ts
+// 🎯 PROMPT CACHING: Las instrucciones estáticas se cachean automáticamente cuando el agente las usa
+// Ver: MESSAGE_STREAM_STATIC_INSTRUCTIONS en config/promptConstants.ts
+// NOTA: @openai/agents SDK maneja el caching internamente al crear el Agent
 
 // 3. Crear el Agente con Pinecone + streaming
+// 🎯 PROMPT CACHING: Usar MESSAGE_STREAM_STATIC_INSTRUCTIONS desde config
+// El SDK de @openai/agents maneja automáticamente el caching de las instrucciones
 // NOTA: NO usar outputType con streaming (causa error "Model did not produce a final response!")
 const myAgent = new Agent({
   name: agentName,
-  instructions: agentInstructions,
+  instructions: MESSAGE_STREAM_STATIC_INSTRUCTIONS,
   model: agentModel,
   modelSettings: {
     temperature: 0.3,
@@ -407,19 +367,6 @@ export async function POST(request: NextRequest) {
 
           // 🎯 DETECTAR QUICK ACTIONS solo para preguntas específicas sobre inscripciones
           // Solo mostrar si el usuario pregunta EXPLÍCITAMENTE sobre inscribirse/apuntarse
-          const inscriptionKeywords = [
-            'inscrib',
-            'apunta',
-            'unir',
-            'participar',
-            'formulario',
-            'registr',
-            'cómo entrar',
-            'como entrar',
-            'cómo me uno',
-            'como me uno'
-          ];
-
           // QuickActions DESACTIVADOS por solicitud del usuario
           // const isAskingAboutInscription = inscriptionKeywords.some(kw =>
           //   originalMessage.toLowerCase().includes(kw)

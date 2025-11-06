@@ -1,0 +1,60 @@
+# Health Check Load Test
+# Tests the /api/health endpoint under load
+#
+# Usage:
+#   npm run test:load:health
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 20
+      name: "Ramp-up"
+    # Sustained load
+    - duration: 120
+      arrivalRate: 20
+      name: "Sustained load"
+    # Peak load
+    - duration: 60
+      arrivalRate: 20
+      rampTo: 50
+      name: "Peak load"
+    # Cool down
+    - duration: 30
+      arrivalRate: 50
+      rampTo: 5
+      name: "Cool down"
+  processor: "./load-test-helpers.js"
+  plugins:
+    expect: {}
+  ensure:
+    maxErrorRate: 1  # Max 1% error rate
+    p95: 2000        # P95 latency < 2 seconds
+    p99: 5000        # P99 latency < 5 seconds
+
+scenarios:
+  - name: "Health Check"
+    weight: 100
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: status
+            - hasProperty: services.database.status
+            - hasProperty: services.api.status
+          capture:
+            - json: "$.status"
+              as: "healthStatus"
+            - json: "$.services.database.latency_ms"
+              as: "dbLatency"
+            - json: "$.services.api.latency_ms"
+              as: "apiLatency"
+      - log: "Health: {{ healthStatus }}, DB: {{ dbLatency }}ms, API: {{ apiLatency }}ms"

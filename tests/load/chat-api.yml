@@ -1,0 +1,124 @@
+# Chat API Load Test
+# Tests the /api/chat/completions endpoint under realistic load
+#
+# This endpoint is critical as it:
+# - Calls OpenAI API (rate limits apply)
+# - Performs RAG search in Pinecone
+# - Updates conversation history in Supabase
+# - Has high response times (AI generation)
+#
+# Usage:
+#   npm run test:load:chat
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm-up: Low load to warm up caches
+    - duration: 60
+      arrivalRate: 2
+      name: "Warm-up"
+    # Normal load: Simulate typical usage
+    - duration: 180
+      arrivalRate: 5
+      name: "Normal load (5 req/s)"
+    # Peak hours: Simulate busy periods
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 15
+      name: "Peak hours (15 req/s)"
+    # Sustained peak
+    - duration: 180
+      arrivalRate: 15
+      name: "Sustained peak"
+    # Cool down
+    - duration: 60
+      arrivalRate: 15
+      rampTo: 2
+      name: "Cool down"
+  processor: "./load-test-helpers.js"
+  plugins:
+    expect: {}
+    metrics-by-endpoint:
+      stripQueryString: true
+  variables:
+    authToken: "{{ $processEnvironment.TEST_AUTH_TOKEN }}"
+  ensure:
+    maxErrorRate: 5      # Max 5% error rate (OpenAI can fail)
+    p95: 10000           # P95 < 10s (AI generation is slow)
+    p99: 20000           # P99 < 20s
+
+scenarios:
+  - name: "Chat Completion - With RAG"
+    weight: 70
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomMessage"
+      - post:
+          url: "/api/chat/completions"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            message: "{{ randomMessage }}"
+            workspaceId: "{{ workspaceId }}"
+            conversationId: "test-conversation-{{ $randomNumber(1, 100) }}"
+            useRag: true
+          expect:
+            - statusCode:
+                - 200
+                - 429  # Rate limit is acceptable
+            - contentType: json
+          afterResponse: "validateChatResponse"
+          capture:
+            - json: "$.message"
+              as: "aiResponse"
+            - json: "$.usage.total_tokens"
+              as: "tokensUsed"
+      - log: "AI Response ({{ tokensUsed }} tokens): {{ aiResponse }}"
+      - function: "mediumThink"
+
+  - name: "Chat Completion - No RAG"
+    weight: 20
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - function: "generateRandomMessage"
+      - post:
+          url: "/api/chat/completions"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            message: "{{ randomMessage }}"
+            workspaceId: "{{ workspaceId }}"
+            conversationId: "test-conversation-{{ $randomNumber(1, 100) }}"
+            useRag: false
+          expect:
+            - statusCode:
+                - 200
+                - 429
+            - contentType: json
+          afterResponse: "validateChatResponse"
+      - function: "mediumThink"
+
+  - name: "Chat Completion - Conversation History"
+    weight: 10
+    flow:
+      - function: "generateRandomWorkspaceId"
+      - loop:
+          - function: "generateRandomMessage"
+          - post:
+              url: "/api/chat/completions"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+                Content-Type: "application/json"
+              json:
+                message: "{{ randomMessage }}"
+                workspaceId: "{{ workspaceId }}"
+                conversationId: "test-long-conversation-{{ $randomNumber(1, 20) }}"
+                useRag: true
+              expect:
+                - statusCode:
+                    - 200
+                    - 429
+          - function: "shortThink"
+        count: 5  # Simulate 5-message conversation
