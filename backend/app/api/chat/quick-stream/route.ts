@@ -21,7 +21,7 @@ type QuickChatRequest = {
 export async function POST(request: NextRequest) {
   try {
     // 🛡️ RATE LIMITING: 10 mensajes por minuto por IP
-    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
     const { success, remaining } = await checkRateLimit(ip);
 
     if (!success) {

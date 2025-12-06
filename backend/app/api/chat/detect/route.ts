@@ -20,7 +20,7 @@ const openai = new OpenAI({ apiKey });
 export async function POST(request: NextRequest) {
   try {
     // 🛡️ RATE LIMITING: 20 detecciones por minuto por IP (más alto porque se llama siempre)
-    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
     const { success } = await checkRateLimit(ip, { limit: 20, window: '1m' });
 
     if (!success) {
