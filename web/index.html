@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+
+  <!--
+    Este archivo HTML personalizado permite agregar configuración PWA
+    que no está disponible en el HTML generado automáticamente por Expo
+  -->
+
+  <!-- Viewport configuración para PWA -->
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1.00001,viewport-fit=cover,user-scalable=no"
+  />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Theme color (barra superior en Android) -->
+  <meta name="theme-color" content="#6366f1" />
+
+  <!-- iOS específico -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Parroquias" />
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png" />
+
+  <!-- Android Chrome -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+
+  <!-- Favicon genérico -->
+  <link rel="icon" href="/favicon.png" />
+  <link rel="shortcut icon" href="/favicon.png" />
+
+  <!-- Meta tags para SEO -->
+  <meta name="description" content="Asistente parroquial inteligente con IA para consultas sobre sacramentos, actividades y eventos" />
+  <meta name="keywords" content="parroquia, iglesia, sacramentos, catequesis, IA, chatbot" />
+  <meta name="author" content="Parroquias App" />
+
+  <!-- Open Graph para compartir en redes sociales -->
+  <meta property="og:title" content="Chatbot Parroquial" />
+  <meta property="og:description" content="Asistente parroquial inteligente con IA" />
+  <meta property="og:image" content="/icons/icon-512x512.png" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Chatbot Parroquial" />
+  <meta name="twitter:description" content="Asistente parroquial inteligente con IA" />
+  <meta name="twitter:image" content="/icons/icon-512x512.png" />
+
+  <title>Chatbot Parroquial</title>
+
+  <style>
+    /**
+     * Estilos de carga inicial
+     * Previene FOUC (Flash of Unstyled Content)
+     */
+    html,
+    body,
+    #root {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #ffffff;
+      overflow: hidden;
+      overscroll-behavior-y: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    #root {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Spinner de carga inicial */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Ocultar cuando la app carga */
+    .app-loaded .loading-container {
+      display: none;
+    }
+
+    /* Prevenir zoom en iOS */
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+
+    /* Desactivar pull-to-refresh en Chrome Android */
+    body {
+      overscroll-behavior-y: none;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Indicador de carga inicial -->
+  <div class="loading-container">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Cargando...</div>
+  </div>
+
+  <!-- Raíz de la aplicación React -->
+  <div id="root"></div>
+
+  <!-- Ocultar spinner cuando React carga -->
+  <script>
+    // Cuando React monta, agregar clase para ocultar spinner
+    window.addEventListener('load', function () {
+      document.body.classList.add('app-loaded');
+    });
+  </script>
+
+  <!-- El bundle JS de Expo se inyectará aquí automáticamente -->
+</body>
+
+</html>

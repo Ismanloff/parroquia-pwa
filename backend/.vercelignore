@@ -1,0 +1,7 @@
+# Archivos de test y scripts
+tests/
+scripts/
+cache-data.json
+test-chatbot.sh
+*.test.ts
+*.spec.ts

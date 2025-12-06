@@ -1,0 +1,493 @@
+{
+  "name": "SUBIDA PARROQUIA V3.1 mejorado OFICIAL!!!! LOOP",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1bFxVumMXjzgrLoVjtbBTqUGXdOZo7RGQ",
+          "mode": "list",
+          "cachedResultName": "parroquia",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1bFxVumMXjzgrLoVjtbBTqUGXdOZo7RGQ"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "name": "Google Drive Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        368
+      ],
+      "id": "292f4536-5cd6-44f9-a036-3e466baad7a0",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "hV8LWQtD5lmaCvdd",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -560,
+        368
+      ],
+      "id": "7104bdab-c8f6-4cd5-98b3-c07eaee03202",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "hV8LWQtD5lmaCvdd",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        304
+      ],
+      "id": "0ac46c1e-a0c0-4507-b0dc-f04d00a3debc",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-3-large",
+        "options": {
+          "dimensions": 3072,
+          "timeout": 90000000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        560
+      ],
+      "id": "59fd3dbe-0054-4d82-ae8d-5027dce6132e",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "yBeLYXnRgCWTcYPs",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chunkSize": 700,
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        800
+      ],
+      "id": "b57febc7-035b-4bc5-b85e-0482e29074bb",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============== PROCESADOR PARROQUIAL V1 - 4 CAMPOS OBLIGATORIOS ===============\n\nfunction detectarCategoriaPastoral(texto) {\n  const textoLower = texto.toLowerCase();\n  \n  // Detección por palabras clave específicas\n  if (textoLower.includes('bautismo') || textoLower.includes('confirmación') || \n      textoLower.includes('matrimonio') || textoLower.includes('eucaristía') ||\n      textoLower.includes('confesión') || textoLower.includes('unción')) {\n    return 'sacramentos';\n  }\n  \n  if (textoLower.includes('catequesis') || textoLower.includes('primera comunión') || \n      textoLower.includes('niños') && textoLower.includes('formación')) {\n    return 'catequesis';\n  }\n  \n  if (textoLower.includes('misa') || textoLower.includes('celebración') || \n      textoLower.includes('eucaristía') || textoLower.includes('liturgia')) {\n    return 'liturgia';\n  }\n  \n  if (textoLower.includes('caritas') || textoLower.includes('ayuda social') || \n      textoLower.includes('necesitados') || textoLower.includes('solidaridad')) {\n    return 'caritas';\n  }\n  \n  if (textoLower.includes('oración') || textoLower.includes('rosario') || \n      textoLower.includes('adoración')) {\n    return 'grupos_oracion';\n  }\n  \n  if (textoLower.includes('jóvenes') || textoLower.includes('juventud') || \n      textoLower.includes('adolescentes')) {\n    return 'jovenes';\n  }\n  \n  if (textoLower.includes('familia') || textoLower.includes('matrimonios') || \n      textoLower.includes('padres')) {\n    return 'familias';\n  }\n  \n  if (textoLower.includes('中文') || textoLower.includes('china') || \n      textoLower.includes('chinese')) {\n    return 'comunidad_china';\n  }\n  \n  if (textoLower.includes('formación') || textoLower.includes('curso') || \n      textoLower.includes('taller')) {\n    return 'formacion';\n  }\n  \n  return 'informacion_general';\n}\n\nfunction detectarTipoContenido(texto, fileName) {\n  const textoLower = texto.toLowerCase();\n  const fileNameLower = fileName.toLowerCase();\n  \n  // Detección por contenido y nombre de archivo\n  if (textoLower.includes('horario') && textoLower.includes('misa')) {\n    return 'horarios_misas';\n  }\n  \n  if (textoLower.includes('sacramento') || textoLower.includes('preparación sacramental')) {\n    return 'guia_sacramentos';\n  }\n  \n  if (fileNameLower.includes('catequesis') || textoLower.includes('tema catequesis')) {\n    return 'material_catequesis';\n  }\n  \n  if (textoLower.includes('calendario litúrgico') || textoLower.includes('festividades')) {\n    return 'calendario_liturgico';\n  }\n  \n  if (fileNameLower.includes('boletín') || fileNameLower.includes('hoja parroquial')) {\n    return 'boletin_parroquial';\n  }\n  \n  if (textoLower.includes('inscripción') || textoLower.includes('formulario')) {\n    return 'inscripcion_actividad';\n  }\n  \n  if (textoLower.includes('urgente') || textoLower.includes('importante') || \n      textoLower.includes('aviso')) {\n    return 'comunicado_urgente';\n  }\n  \n  if (textoLower.includes('formación') || textoLower.includes('curso de fe')) {\n    return 'formacion_fe';\n  }\n  \n  if (textoLower.includes('testimonio') || textoLower.includes('experiencia de fe')) {\n    return 'testimonio_feligres';\n  }\n  \n  if (textoLower.includes('actividad') || textoLower.includes('evento')) {\n    return 'actividad_pastoral';\n  }\n  \n  if (textoLower.includes('acta') || textoLower.includes('documento oficial')) {\n    return 'documento_administrativo';\n  }\n  \n  if (textoLower.includes('preguntas frecuentes') || textoLower.includes('faq')) {\n    return 'preguntas_frecuentes';\n  }\n  \n  if (textoLower.includes('contacto') || textoLower.includes('teléfono') || \n      textoLower.includes('email')) {\n    return 'contactos_servicios';\n  }\n  \n  return 'otro';\n}\n\nfunction detectarParroquia(texto) {\n  const textoLower = texto.toLowerCase();\n  \n  if (textoLower.includes('soledad') && !textoLower.includes('transfiguración')) {\n    return 'soledad';\n  }\n  \n  if (textoLower.includes('transfiguración') && !textoLower.includes('soledad')) {\n    return 'transfiguracion';\n  }\n  \n  return 'ambas';\n}\n\nfunction detectarAudiencia(texto) {\n  const textoLower = texto.toLowerCase();\n  \n  if (textoLower.includes('niños') || textoLower.includes('catequesis infantil')) {\n    return 'ninos_catequesis';\n  }\n  \n  if (textoLower.includes('jóvenes') || textoLower.includes('juventud')) {\n    return 'jovenes';\n  }\n  \n  if (textoLower.includes('adultos') && !textoLower.includes('mayores')) {\n    return 'adultos';\n  }\n  \n  if (textoLower.includes('familia') || textoLower.includes('padres e hijos')) {\n    return 'familias';\n  }\n  \n  if (textoLower.includes('tercera edad') || textoLower.includes('mayores')) {\n    return 'tercera_edad';\n  }\n  \n  if (textoLower.includes('catequistas') || textoLower.includes('formadores')) {\n    return 'catequistas';\n  }\n  \n  if (textoLower.includes('中文') || textoLower.includes('comunidad china')) {\n    return 'comunidad_china';\n  }\n  \n  return 'publico_general';\n}\n\nfunction detectarTemporadaLiturgica(texto, fecha) {\n  const textoLower = texto.toLowerCase();\n  \n  if (textoLower.includes('adviento')) return 'adviento';\n  if (textoLower.includes('navidad')) return 'navidad';\n  if (textoLower.includes('cuaresma')) return 'cuaresma';\n  if (textoLower.includes('semana santa')) return 'semana_santa';\n  if (textoLower.includes('pascua')) return 'pascua';\n  if (textoLower.includes('tiempo ordinario')) return 'tiempo_ordinario';\n  \n  // Detección por fecha si está disponible\n  if (fecha) {\n    const mes = new Date(fecha).getMonth() + 1;\n    const dia = new Date(fecha).getDate();\n    \n    // Aproximaciones básicas\n    if (mes === 12 && dia >= 1 && dia <= 24) return 'adviento';\n    if ((mes === 12 && dia >= 25) || (mes === 1 && dia <= 6)) return 'navidad';\n    if (mes >= 2 && mes <= 3) return 'cuaresma';\n    if (mes === 4 && dia <= 15) return 'semana_santa';\n    if (mes === 4 && dia > 15 || mes === 5) return 'pascua';\n  }\n  \n  return 'no_aplica';\n}\n\nfunction calcularNivelUrgencia(texto) {\n  const textoLower = texto.toLowerCase();\n  \n  if (textoLower.includes('urgente') || textoLower.includes('importante') || \n      textoLower.includes('hoy') || textoLower.includes('mañana')) {\n    return 'alta';\n  }\n  \n  if (textoLower.includes('próximo') || textoLower.includes('esta semana')) {\n    return 'media';\n  }\n  \n  return 'baja';\n}\n\nfunction extraerKeywords(texto, categoria, tipo) {\n  const palabrasComunes = new Set(['el', 'la', 'de', 'en', 'y', 'a', 'los', 'las', 'del', 'al', 'con', 'por', 'para', 'es', 'un', 'una']);\n  \n  // Extraer palabras más frecuentes\n  const palabras = texto.toLowerCase()\n    .replace(/[^\\w\\sáéíóúñü]/g, ' ')\n    .split(/\\s+/)\n    .filter(p => p.length > 3 && !palabrasComunes.has(p));\n  \n  const frecuencias = {};\n  palabras.forEach(p => {\n    frecuencias[p] = (frecuencias[p] || 0) + 1;\n  });\n  \n  // Ordenar por frecuencia y tomar las top 5\n  const keywords = Object.entries(frecuencias)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 5)\n    .map(([palabra]) => palabra);\n  \n  // Asegurar que hay al menos 2 keywords\n  if (keywords.length < 2) {\n    keywords.push(categoria, tipo);\n  }\n  \n  return keywords.slice(0, 5);\n}\n\nfunction generarDescripcionEnriquecida(texto, metadata) {\n  // Extraer primeras 300 palabras significativas\n  const preview = texto\n    .substring(0, 800)\n    .replace(/\\s+/g, ' ')\n    .trim();\n  \n  // Combinar con metadata clave\n  const titulo = metadata.titulo || 'Documento Parroquial';\n  const tipo = metadata.tipo_contenido || 'contenido';\n  const categoria = metadata.categoria_pastoral || 'general';\n  const parroquia = metadata.parroquia_ubicacion || 'ambas';\n  const keywords = Array.isArray(metadata.keywords_principales) \n    ? metadata.keywords_principales.join(', ') \n    : '';\n  \n  // Generar descripción estructurada\n  let descripcion = `${titulo}. Categoría: ${categoria}. Tipo: ${tipo}.`;\n  \n  if (parroquia !== 'ambas') {\n    descripcion += ` Parroquia: ${parroquia}.`;\n  }\n  \n  if (keywords) {\n    descripcion += ` Temas: ${keywords}.`;\n  }\n  \n  // Agregar preview del contenido\n  descripcion += ` Contenido: ${preview.substring(0, 400)}...`;\n  \n  // Limitar a 150 palabras aproximadamente (900 caracteres)\n  return descripcion.substring(0, 900);\n}\n\nfunction calcularPrioridadBusqueda(texto, metadata) {\n  let prioridad = 1.0;\n  const textoLower = texto.toLowerCase();\n  \n  // Máxima prioridad para urgencias\n  if (metadata.nivel_urgencia === 'alta' || \n      textoLower.includes('urgente') || \n      textoLower.includes('importante')) {\n    prioridad = 2.0;\n  }\n  // Alta prioridad para horarios y sacramentos\n  else if (metadata.tipo_contenido === 'horarios_misas' || \n           metadata.categoria_pastoral === 'sacramentos') {\n    prioridad = 1.8;\n  }\n  // Prioridad media-alta para inscripciones y actividades próximas\n  else if (metadata.tipo_contenido === 'inscripcion_actividad' ||\n           textoLower.includes('inscripción') ||\n           textoLower.includes('próximo')) {\n    prioridad = 1.5;\n  }\n  // Prioridad media para catequesis y formación\n  else if (metadata.categoria_pastoral === 'catequesis' ||\n           metadata.categoria_pastoral === 'formacion') {\n    prioridad = 1.3;\n  }\n  \n  return prioridad;\n}\n\n// =============== PROCESAMIENTO PRINCIPAL ===============\nconst itemsOut = [];\n\ntry {\n  const extractedFile = $('Extract from File').first();\n  const metadataExtractor = $('Information Extractor').first();\n  const fileName = $('Loop Over Items').first().json.name || 'documento';\n  \n  if (!extractedFile) {\n    console.log('❌ No se encontró archivo');\n    return [];\n  }\n\n  const rawText = extractedFile.json.data || extractedFile.json.text || extractedFile.json.content || '';\n  \n  if (!rawText || rawText.length < 50) {\n    console.log('❌ Texto insuficiente');\n    return [];\n  }\n\n  console.log(`⛪ Procesando documento parroquial: ${fileName}`);\n\n  // Obtener metadata del extractor\n  const metadata = metadataExtractor?.json?.output || metadataExtractor?.json || {};\n  \n  // ===== CAMPOS OBLIGATORIOS (4) =====\n  const titulo = metadata.titulo || \n    fileName.replace(/\\.[^/.]+$/, '').substring(0, 80);\n  \n  const tipo_contenido = metadata.tipo_contenido || \n    detectarTipoContenido(rawText, fileName);\n  \n  const fecha_creacion = metadata.fecha_creacion || \n    new Date().toISOString().split('T')[0];\n  \n  const categoria_pastoral = metadata.categoria_pastoral || \n    detectarCategoriaPastoral(rawText);\n  \n  // ===== CAMPOS OPCIONALES CON ALTA RELEVANCIA =====\n  const parroquia_ubicacion = metadata.parroquia_ubicacion || \n    detectarParroquia(rawText);\n  \n  const audiencia_objetivo = metadata.audiencia_objetivo || \n    detectarAudiencia(rawText);\n  \n  const nivel_urgencia = metadata.nivel_urgencia || \n    calcularNivelUrgencia(rawText);\n  \n  const temporada_liturgica = metadata.temporada_liturgica || \n    detectarTemporadaLiturgica(rawText, fecha_creacion);\n  \n  const keywords_principales = metadata.keywords_principales || \n    extraerKeywords(rawText, categoria_pastoral, tipo_contenido);\n  \n  // Generar descripción enriquecida para búsqueda semántica\n  const descripcion_enriquecida = metadata.descripcion_enriquecida || \n    generarDescripcionEnriquecida(rawText, {\n      titulo,\n      tipo_contenido,\n      categoria_pastoral,\n      parroquia_ubicacion,\n      keywords_principales\n    });\n  \n  // Calcular prioridad de búsqueda\n  const prioridad_busqueda = calcularPrioridadBusqueda(rawText, {\n    nivel_urgencia,\n    tipo_contenido,\n    categoria_pastoral\n  });\n  \n  // Detectar características adicionales\n  const textoLower = rawText.toLowerCase();\n  const caracteristicas = {\n    contiene_horarios: /\\d{1,2}:\\d{2}|horario/.test(textoLower),\n    contiene_fechas: /\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4}/.test(textoLower),\n    contiene_telefonos: /\\d{3}[\\s\\-]?\\d{3}[\\s\\-]?\\d{3}/.test(textoLower),\n    contiene_emails: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/.test(textoLower),\n    requiere_inscripcion: /inscripción|inscribir|apuntar|formulario/.test(textoLower),\n    es_documento_liturgico: ['liturgia', 'grupos_oracion'].includes(categoria_pastoral),\n    es_material_formativo: ['catequesis', 'formacion'].includes(categoria_pastoral),\n    es_comunicado_oficial: ['comunicado_urgente', 'documento_administrativo'].includes(tipo_contenido)\n  };\n  \n  // CREAR OUTPUT PARA DATA LOADER\n  itemsOut.push({\n    json: {\n      pageContent: rawText,\n      metadata: {\n        // CAMPOS OBLIGATORIOS (4)\n        titulo: titulo,\n        tipo_contenido: tipo_contenido,\n        fecha_creacion: fecha_creacion,\n        categoria_pastoral: categoria_pastoral,\n        \n        // CAMPOS OPCIONALES CON ALTA RELEVANCIA\n        keywords_principales: keywords_principales,\n        parroquia_ubicacion: parroquia_ubicacion,\n        audiencia_objetivo: audiencia_objetivo,\n        nivel_urgencia: nivel_urgencia,\n        temporada_liturgica: temporada_liturgica,\n        descripcion_enriquecida: descripcion_enriquecida,\n        \n        // METADATA TÉCNICA\n        file_name: fileName,\n        doc_id: $('Loop Over Items').first().json.id || 'unknown',\n        prioridad_busqueda: prioridad_busqueda,\n        fecha_procesamiento: new Date().toISOString(),\n        version: 'parroquial-v1.0',\n        \n        // CARACTERÍSTICAS ADICIONALES\n        ...caracteristicas\n      }\n    }\n  });\n\n  console.log(`✅ Documento procesado exitosamente`);\n  console.log(`📊 Campos obligatorios: ${titulo} | ${tipo_contenido} | ${categoria_pastoral}`);\n  console.log(`🎯 Parroquia: ${parroquia_ubicacion} | Audiencia: ${audiencia_objetivo}`);\n  console.log(`⚡ Urgencia: ${nivel_urgencia} | Prioridad búsqueda: ${prioridad_busqueda}`);\n  \n} catch (error) {\n  console.error('❌ Error procesando documento:', error);\n  return [];\n}\n\nreturn itemsOut;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        208
+      ],
+      "id": "54fbc702-06ed-4dcf-af5b-f8b8860bedef",
+      "name": "Code "
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.output || $json.text || $json.content || $json.data || '' }}",
+        "schemaType": "manual",
+        "inputSchema": "={\n  \"type\": \"object\",\n  \"properties\": {\n    \"titulo\": {\n      \"type\": \"string\",\n      \"description\": \"Título descriptivo del documento (máx 80 caracteres)\"\n    },\n    \"tipo_contenido\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"horarios_misas\",\n        \"guia_sacramentos\", \n        \"material_catequesis\",\n        \"calendario_liturgico\",\n        \"boletin_parroquial\",\n        \"inscripcion_actividad\",\n        \"comunicado_urgente\",\n        \"formacion_fe\",\n        \"testimonio_feligres\",\n        \"actividad_pastoral\",\n        \"documento_administrativo\",\n        \"preguntas_frecuentes\",\n        \"contactos_servicios\",\n        \"otro\"\n      ]\n    },\n    \"fecha_creacion\": {\n      \"type\": \"string\",\n      \"format\": \"date\",\n      \"description\": \"Formato YYYY-MM-DD\"\n    },\n    \"categoria_pastoral\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"sacramentos\",\n        \"catequesis\", \n        \"liturgia\",\n        \"caritas\",\n        \"grupos_oracion\",\n        \"jovenes\",\n        \"familias\",\n        \"formacion\",\n        \"comunidad_china\",\n        \"informacion_general\"\n      ]\n    },\n    \"keywords_principales\": {\n      \"type\": \"array\",\n      \"items\": {\"type\": \"string\"},\n      \"minItems\": 2,\n      \"maxItems\": 5,\n      \"description\": \"Palabras clave para búsqueda\"\n    },\n    \"parroquia_ubicacion\": {\n      \"type\": \"string\", \n      \"enum\": [\"soledad\", \"transfiguracion\", \"ambas\"],\n      \"default\": \"ambas\"\n    },\n    \"audiencia_objetivo\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"ninos_catequesis\",\n        \"jovenes\", \n        \"adultos\",\n        \"familias\",\n        \"tercera_edad\",\n        \"catequistas\",\n        \"comunidad_china\",\n        \"publico_general\"\n      ],\n      \"default\": \"publico_general\"\n    },\n    \"nivel_urgencia\": {\n      \"type\": \"string\",\n      \"enum\": [\"alta\", \"media\", \"baja\"],\n      \"default\": \"media\"\n    },\n    \"temporada_liturgica\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"tiempo_ordinario\",\n        \"adviento\", \n        \"navidad\",\n        \"cuaresma\",\n        \"semana_santa\",\n        \"pascua\",\n        \"no_aplica\"\n      ],\n      \"default\": \"no_aplica\"\n    },\n    \"descripcion_enriquecida\": {\n      \"type\": \"string\",\n      \"description\": \"Resumen del contenido para búsqueda (50-150 palabras)\"\n    }\n  },\n  \"required\": [\"titulo\", \"tipo_contenido\", \"fecha_creacion\", \"categoria_pastoral\"],\n  \"additionalProperties\": false\n}",
+        "options": {
+          "systemPromptTemplate": "=Eres un experto analizador de contenido parroquial católico. Tu tarea es extraer metadatos de documentos parroquiales con MÁXIMA PRECISIÓN.\n\nCONTEXTO PARROQUIAL:\n- Parroquias: Nuestra Señora de la Soledad y Transfiguración del Señor (Madrid)\n- Audiencias: Niños, jóvenes, adultos, familias, tercera edad, comunidad china\n- Actividades: Misas, sacramentos, catequesis, Cáritas, grupos de oración, formación\n\nINSTRUCCIONES CRÍTICAS:\n1. SIEMPRE completa los 4 campos obligatorios (titulo, tipo_contenido, fecha_creacion, categoria_pastoral)\n2. Si no encuentras información clara, usa valores por defecto inteligentes\n3. Procesa keywords_principales como ARRAY de strings, no como texto\n4. **descripcion_enriquecida: MÁXIMO 30 PALABRAS** - Solo lo esencial para búsqueda\n\nREGLAS DE EXTRACCIÓN:\n\n📌 CAMPOS OBLIGATORIOS (nunca dejar vacíos):\n- titulo: Extrae o genera un título descriptivo (máx 80 caracteres)\n- tipo_contenido: Identifica el tipo según el contenido\n- fecha_creacion: Formato YYYY-MM-DD (si no aparece, usa fecha actual)\n- categoria_pastoral: Detecta la categoría pastoral principal\n\n🔍 DETECCIÓN AUTOMÁTICA DE TIPO_CONTENIDO:\n- \"horario\" + \"misa\" → \"horarios_misas\"\n- \"bautismo/confirmación/matrimonio\" → \"guia_sacramentos\"\n- \"catequesis/primera comunión\" → \"material_catequesis\"\n- \"calendario/festividades\" → \"calendario_liturgico\"\n- boletín/newsletter → \"boletin_parroquial\"\n- formulario/inscripción → \"inscripcion_actividad\"\n- \"urgente/importante/aviso\" → \"comunicado_urgente\"\n\n🏷️ DETECCIÓN DE CATEGORIA_PASTORAL:\n- Misa/eucaristía → \"liturgia\"\n- Bautismo/matrimonio → \"sacramentos\"\n- Catequesis/comunión → \"catequesis\"\n- Cáritas/ayuda social → \"caritas\"\n- Adoración/rosario → \"grupos_oracion\"\n- Pastoral juvenil → \"jovenes\"\n- 中文/chino → \"comunidad_china\"\n\n👥 DETECCIÓN DE AUDIENCIA:\n- Niños/infantil → \"ninos_catequesis\"\n- Jóvenes/adolescentes → \"jovenes\"\n- Mayores/jubilados → \"tercera_edad\"\n- Si no específico → \"publico_general\"\n\n📅 TEMPORADA LITÚRGICA:\n- Diciembre → \"adviento\"\n- Navidad/reyes → \"navidad\"\n- Ceniza/cuaresma → \"cuaresma\"\n- Semana Santa → \"semana_santa\"\n- Pascua → \"pascua\"\n- Si no aplica → \"no_aplica\"\n\n🔑 KEYWORDS_PRINCIPALES:\n- Extrae 2-5 palabras clave\n- Formato: [\"palabra1\", \"palabra2\", \"palabra3\"]\n\n📝 **DESCRIPCION_ENRIQUECIDA (MUY IMPORTANTE - MAX 30 PALABRAS)**:\nGenera una frase breve que contenga:\n- Qué es + Para quién + Cuándo/Dónde\n- Ejemplo: \"Horarios misas dominicales parroquia Soledad, incluye confesiones sábados y vigilias primer viernes cada mes\"\n\nVALORES POR DEFECTO:\n- tipo_contenido: \"otro\"\n- fecha_creacion: [Fecha actual YYYY-MM-DD]\n- categoria_pastoral: \"informacion_general\"\n- parroquia_ubicacion: \"ambas\"\n- audiencia_objetivo: \"publico_general\"\n- nivel_urgencia: \"media\"\n- temporada_liturgica: \"no_aplica\"\n\nOUTPUT: JSON válido con todos los campos, sin comentarios."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        432,
+        256
+      ],
+      "id": "6465e9b1-0c18-418a-adf0-999076a8c5fb",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-20250514",
+          "cachedResultName": "Claude 4 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        464
+      ],
+      "id": "1d6ff264-33ca-462c-8624-b6f38ee9a428",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "fRAHA0Cs99tpsOGJ",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "parroquias",
+          "mode": "list",
+          "cachedResultName": "parroquias"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        256
+      ],
+      "id": "8686024c-302f-410f-8290-5b208e5514c8",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "wTQy6bYzJpU4ySCR",
+          "name": "PineconeApi parroquias"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1bFxVumMXjzgrLoVjtbBTqUGXdOZo7RGQ",
+            "mode": "list",
+            "cachedResultName": "parroquia",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1bFxVumMXjzgrLoVjtbBTqUGXdOZo7RGQ"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -896,
+        352
+      ],
+      "id": "4497c162-32bf-4ba0-968c-5f894d7834a8",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "hV8LWQtD5lmaCvdd",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -272,
+        304
+      ],
+      "id": "032ae86e-0cc1-4fa4-839c-ce1a76b7b878",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        288
+      ],
+      "id": "a3e63a92-33c0-4cc1-b8a9-0e377949e6d9",
+      "name": "Wait",
+      "webhookId": "1a9ac4f1-1af5-43fe-a92a-89e8a88115cf"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "= {{ $json.pageContent }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "titulo",
+                "value": "={{ $json.metadata.titulo }}"
+              },
+              {
+                "name": "tipo_contenido",
+                "value": "={{ $json.metadata.tipo_contenido }}"
+              },
+              {
+                "name": "fecha_creacion",
+                "value": "={{ $json.metadata.fecha_creacion }}"
+              },
+              {
+                "name": "categoria_pastoral",
+                "value": "={{ $json.metadata.categoria_pastoral }}"
+              },
+              {
+                "name": "keywords_principales",
+                "value": "= {{ $json.metadata.keywords_principales }}"
+              },
+              {
+                "name": "parroquia_ubicacion",
+                "value": "= {{ $json.metadata.parroquia_ubicacion }}"
+              },
+              {
+                "name": "audiencia_objetivo",
+                "value": "= {{ $json.metadata.audiencia_objetivo }}"
+              },
+              {
+                "name": "nivel_urgencia",
+                "value": "= {{ $json.metadata.nivel_urgencia }}"
+              },
+              {
+                "name": "temporada_liturgica",
+                "value": "= {{ $json.metadata.temporada_liturgica }}"
+              },
+              {
+                "name": "descripcion_enriquecida",
+                "value": "={{ $json.metadata.descripcion_enriquecida }}"
+              },
+              {
+                "name": "file_name",
+                "value": "={{ $json.metadata.file_name }}"
+              },
+              {
+                "name": "doc_id",
+                "value": "={{ $json.metadata.doc_id }}"
+              },
+              {
+                "name": "=fecha_procesamiento",
+                "value": "={{ $json.metadata.fecha_procesamiento }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1296,
+        464
+      ],
+      "id": "607a2c10-4323-4221-b440-425b08386b11",
+      "name": "Default Data Loader"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code ": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Code ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "79f83f0f-7912-4378-be49-095554cdff61",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f26656a74ad6a406b0b659aafaf1e5e0b96047b58206449998ff78795e44a1d3"
+  },
+  "id": "DBHXnpDafxtp1U8t",
+  "tags": []
+}
