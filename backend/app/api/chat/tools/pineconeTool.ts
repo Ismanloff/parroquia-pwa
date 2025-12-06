@@ -283,6 +283,11 @@ NO uses esta herramienta para:
 /**
  * Helper function para testing: permite llamar al pineconeTool sin el contexto completo del Agent
  */
-export async function searchPinecone(query: string, categoria?: string | null) {
-  return await pineconeTool.execute({ query, categoria: categoria || null });
+export async function searchPinecone(query: string, categoria?: string | null): Promise<string> {
+  // Llamar directamente a la lógica de ejecución usando type assertion
+  const executeFunc = (pineconeTool as any).execute;
+  if (typeof executeFunc === 'function') {
+    return await executeFunc({ query, categoria: categoria || null });
+  }
+  throw new Error('pineconeTool.execute no está disponible');
 }
