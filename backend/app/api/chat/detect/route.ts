@@ -5,11 +5,14 @@ import { checkRateLimit } from '../../../../lib/ratelimit';
 export const runtime = 'edge';
 
 const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey) {
-  throw new Error('OPENAI_API_KEY no configurada');
-}
 
-const openai = new OpenAI({ apiKey });
+// Inicialización lazy para no fallar durante el build
+const getOpenAI = () => {
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY no configurada');
+  }
+  return new OpenAI({ apiKey });
+};
 
 /**
  * Detector inteligente con GPT-3.5 Turbo
@@ -58,7 +61,7 @@ ${cacheHint}
 
 Responde SOLO con JSON: {"type": "quick"|"full", "reason": "razón breve"}`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         { role: 'system', content: systemPrompt },

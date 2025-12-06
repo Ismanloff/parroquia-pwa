@@ -9,17 +9,30 @@ import Anthropic from '@anthropic-ai/sdk';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// ⚡ CONFIGURAR API KEY
+// ⚡ CONFIGURAR API KEY (lazy para no fallar durante build)
 const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey) {
-  throw new Error('OPENAI_API_KEY no configurada');
-}
-setDefaultOpenAIKey(apiKey);
+let _openaiKeySet = false;
 
-// Inicializar Anthropic client para conversational rewriting
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
-});
+const ensureOpenAIKey = () => {
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY no configurada');
+  }
+  if (!_openaiKeySet) {
+    setDefaultOpenAIKey(apiKey);
+    _openaiKeySet = true;
+  }
+};
+
+// Inicializar Anthropic client para conversational rewriting (lazy)
+let _anthropic: Anthropic | null = null;
+const getAnthropic = () => {
+  if (!_anthropic) {
+    _anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || ''
+    });
+  }
+  return _anthropic;
+};
 
 // ===== CONVERSATIONAL REWRITING =====
 // Detecta preguntas de seguimiento y las reescribe con contexto
@@ -65,7 +78,7 @@ async function rewriteWithContext(
       `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`
     ).join('\n');
 
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 100,
       temperature: 0.1,
@@ -234,6 +247,9 @@ export async function POST(request: NextRequest) {
   console.log(`\n🌊 ========== STREAMING REQUEST ${requestId} ==========`);
 
   try {
+    // Asegurar que la API key esté configurada
+    ensureOpenAIKey();
+
     const { message, conversationHistory: clientHistory } = await request.json();
 
     if (!message) {
