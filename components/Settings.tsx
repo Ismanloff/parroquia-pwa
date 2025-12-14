@@ -90,8 +90,10 @@ export function Settings() {
           'Has bloqueado las notificaciones. Habilítalas en los ajustes de tu navegador.'
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error enabling notifications:', error);
+      // DEBUG: Mostrar error real en móvil
+      alert(`Error DEBUG: ${error?.message || JSON.stringify(error)}`);
       toast.error('Error al activar notificaciones');
     } finally {
       setIsLoading(false);
