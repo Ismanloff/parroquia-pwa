@@ -23,6 +23,10 @@ import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 
+import { setupPushNotifications } from '@/lib/firebase/messaging';
+
+// ... (imports anteriores se mantienen igual, solo añadir el de arriba si falta)
+
 export function Settings() {
   const { themeMode, setThemeMode } = useTheme();
   const { user, signOut, isSupabaseConfigured } = useAuth();
@@ -30,6 +34,7 @@ export function Settings() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermission>('default');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Configuraciones de notificaciones específicas
   const [eventNotifications, setEventNotifications] = useState(true);
@@ -38,11 +43,19 @@ export function Settings() {
 
   useEffect(() => {
     // Use queueMicrotask to avoid synchronous setState in effect
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
       // Verificar permisos actuales
       if ('Notification' in window) {
         setNotificationPermission(Notification.permission);
-        setNotificationsEnabled(Notification.permission === 'granted');
+        const isGranted = Notification.permission === 'granted';
+        setNotificationsEnabled(isGranted);
+
+        // AUTORECUPERACIÓN: Si ya tiene permiso pero borró datos o no se guardó el token
+        // intentamos registrar el token silenciosamente
+        if (isGranted) {
+          console.log('🔄 Permiso existente detectado. Sincronizando token...');
+          await setupPushNotifications();
+        }
       }
 
       // Cargar preferencias desde localStorage
@@ -57,18 +70,31 @@ export function Settings() {
   }, []);
 
   const handleRequestNotifications = async () => {
-    if ('Notification' in window) {
-      const permission = await Notification.requestPermission();
+    if (!('Notification' in window)) return;
+
+    setIsLoading(true);
+    try {
+      // Usar la función completa que pide permiso + obtiene token + guarda en BD
+      const success = await setupPushNotifications();
+
+      const permission = Notification.permission;
       setNotificationPermission(permission);
       setNotificationsEnabled(permission === 'granted');
 
-      if (permission === 'granted') {
-        // Mostrar notificación de prueba
-        new Notification('Notificaciones activadas', {
-          body: 'Recibirás recordatorios sobre eventos y contenido diario',
-          icon: '/icons/icon-192x192.png',
-        });
+      if (success) {
+        haptics.success();
+        toast.success('Notificaciones activadas correctamente');
+      } else if (permission === 'denied') {
+        haptics.error();
+        toast.error(
+          'Has bloqueado las notificaciones. Habilítalas en los ajustes de tu navegador.'
+        );
       }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      toast.error('Error al activar notificaciones');
+    } finally {
+      setIsLoading(false);
     }
   };
 

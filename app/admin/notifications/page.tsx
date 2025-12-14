@@ -1,287 +1,259 @@
 'use client';
 
 import { useState } from 'react';
-import { Send, Bell, CheckCircle, AlertCircle, Loader } from 'lucide-react';
-import { toast } from '@/lib/toast';
+import {
+  Send,
+  Smartphone,
+  Calendar,
+  AlertCircle,
+  CheckCircle2,
+  Image as ImageIcon,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-interface NotificationForm {
-  title: string;
-  body: string;
-  url: string;
-}
+export default function NotificationsAdmin() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export default function AdminNotificationsPage() {
-  const [form, setForm] = useState<NotificationForm>({
+  const [form, setForm] = useState({
     title: '',
     body: '',
-    url: '/',
+    url: '/', // Default to home
+    image: '',
+    topic: 'all', // all | segments (future)
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastResult, setLastResult] = useState<{
-    total: number;
-    successful: number;
-    failed: number;
-  } | null>(null);
+
+  // Preview state
+  const isPreview = true;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!form.title.trim() || !form.body.trim()) {
-      toast.error('Completa todos los campos');
-      return;
-    }
-
-    setIsLoading(true);
-    setLastResult(null);
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
 
     try {
-      const response = await fetch('/api/notifications/send', {
+      const res = await fetch('/api/notifications/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Simple auth check header (in a real text this would be a real token)
+          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || 'parroquia-admin-2025',
         },
         body: JSON.stringify({
           title: form.title,
           body: form.body,
-          url: form.url,
+          data: {
+            url: form.url,
+            image: form.image,
+          },
         }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Error al enviar notificaciones');
+      if (!res.ok) {
+        throw new Error('Error al enviar la notificación');
       }
 
-      setLastResult(result);
-
-      if (result.total === 0) {
-        toast.error(
-          result.message ||
-            'No hay dispositivos registrados. Los usuarios deben activar las notificaciones primero.'
-        );
-      } else {
-        toast.success(`Notificaciones enviadas: ${result.successful}/${result.total}`);
-        // Limpiar formulario solo si se enviaron notificaciones
-        setForm({
-          title: '',
-          body: '',
-          url: '/',
-        });
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error(error instanceof Error ? error.message : 'Error al enviar notificaciones');
+      setSuccess(true);
+      // Reset form slightly but keep success message
+      setTimeout(() => setSuccess(false), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const quickActions = [
-    {
-      title: 'Nuevo evento',
-      body: 'Se ha agregado un nuevo evento al calendario',
-      url: '/calendario',
-    },
-    {
-      title: 'Misa especial',
-      body: 'Mañana habrá misa especial a las 19:00',
-      url: '/calendario',
-    },
-    {
-      title: 'Evangelio del día',
-      body: 'Ya está disponible el evangelio de hoy',
-      url: '/evangelio',
-    },
-  ];
-
-  const applyQuickAction = (action: (typeof quickActions)[0]) => {
-    setForm(action);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center">
-              <Bell className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                Panel de Notificaciones
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400">
-                Envía notificaciones push a todos los dispositivos
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 md:p-10">
+      <div className="max-w-6xl mx-auto">
+        <header className="mb-10">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            Panel de Notificaciones
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Gestiona y envía alertas push a todos los dispositivos registrados.
+          </p>
+        </header>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Formulario */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-6">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">
-              Enviar notificación
-            </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Izquierda: Formulario */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Send className="w-5 h-5 text-indigo-600" />
+                Nueva Notificación
+              </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Título
-                </label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Título de la notificación"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  maxLength={50}
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {form.title.length}/50 caracteres
-                </p>
-              </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Título */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Título
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={50}
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Ej: Evangelio del día disponible"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                  />
+                  <p className="text-xs text-slate-500 mt-1 text-right">{form.title.length}/50</p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Mensaje
-                </label>
-                <textarea
-                  value={form.body}
-                  onChange={(e) => setForm({ ...form, body: e.target.value })}
-                  placeholder="Contenido de la notificación"
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                  maxLength={150}
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {form.body.length}/150 caracteres
-                </p>
-              </div>
+                {/* Mensaje */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Mensaje
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    maxLength={150}
+                    value={form.body}
+                    onChange={(e) => setForm({ ...form, body: e.target.value })}
+                    placeholder="Escribe el contenido de la notificación..."
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all outline-none resize-none"
+                  />
+                  <p className="text-xs text-slate-500 mt-1 text-right">{form.body.length}/150</p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  URL destino
-                </label>
-                <select
-                  value={form.url}
-                  onChange={(e) => setForm({ ...form, url: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  disabled={isLoading}
-                >
-                  <option value="/">Inicio</option>
-                  <option value="/evangelio">Evangelio</option>
-                  <option value="/santo">Santo del día</option>
-                  <option value="/calendario">Calendario</option>
-                  <option value="/chat">Chat</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !form.title.trim() || !form.body.trim()}
-                className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-5 h-5" />
-                    Enviar a todos
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Resultado */}
-            {lastResult && (
-              <div
-                className={`mt-6 p-4 rounded-xl ${
-                  lastResult.total === 0
-                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
-                    : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {lastResult.total === 0 ? (
-                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm font-semibold ${
-                        lastResult.total === 0
-                          ? 'text-yellow-900 dark:text-yellow-100'
-                          : 'text-green-900 dark:text-green-100'
-                      }`}
+                {/* Opciones Avanzadas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Ruta de destino (URL)
+                    </label>
+                    <select
+                      value={form.url}
+                      onChange={(e) => setForm({ ...form, url: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                     >
-                      {lastResult.total === 0
-                        ? 'No hay dispositivos registrados'
-                        : 'Notificaciones enviadas'}
-                    </p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        lastResult.total === 0
-                          ? 'text-yellow-700 dark:text-yellow-300'
-                          : 'text-green-700 dark:text-green-300'
-                      }`}
-                    >
-                      {lastResult.total === 0
-                        ? 'Los usuarios deben activar las notificaciones desde /configuracion/notificaciones'
-                        : `${lastResult.successful} exitosas de ${lastResult.total} dispositivos${lastResult.failed > 0 ? ` (${lastResult.failed} fallidas)` : ''}`}
-                    </p>
+                      <option value="/">🏠 Inicio</option>
+                      <option value="/?tab=calendar">📅 Calendario</option>
+                      <option value="/?tab=settings">⚙️ Ajustes</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Imagen (Opcional URL)
+                    </label>
+                    <div className="relative">
+                      <ImageIcon className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+                      <input
+                        type="url"
+                        value={form.image}
+                        onChange={(e) => setForm({ ...form, image: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+
+                {/* Botón de envío */}
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Enviar Notificación
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Feedback States */}
+              {success && (
+                <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <p className="text-green-800 dark:text-green-300 font-medium">
+                    ¡Notificación enviada con éxito!
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <p className="text-red-800 dark:text-red-300 font-medium">{error}</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Acciones rápidas */}
+          {/* Columna Derecha: Preview */}
           <div className="space-y-6">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-                Plantillas rápidas
-              </h2>
-              <div className="space-y-3">
-                {quickActions.map((action, index) => (
-                  <button
-                    key={index}
-                    onClick={() => applyQuickAction(action)}
-                    disabled={isLoading}
-                    className="w-full text-left p-4 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                      {action.title}
-                    </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{action.body}</p>
-                  </button>
-                ))}
+            <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Smartphone className="w-5 h-5" />
+              Vista Previa
+            </h3>
+
+            <div className="relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-900 border-[14px] rounded-[2.5rem] h-[600px] w-[300px] shadow-xl overflow-hidden">
+              <div className="h-[32px] w-[3px] bg-gray-800 absolute -left-[17px] top-[72px] rounded-l-lg"></div>
+              <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
+              <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[178px] rounded-l-lg"></div>
+              <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
+
+              {/* Pantalla Simulada */}
+              <div className="rounded-[2rem] overflow-hidden w-full h-full bg-slate-50 dark:bg-slate-900 relative">
+                {/* Status Bar */}
+                <div className="h-10 bg-black/20 flex justify-between items-center px-6 text-[10px] text-white font-medium">
+                  <span>9:41</span>
+                  <div className="flex gap-1.5">
+                    <span className="w-3 h-3 bg-white rounded-full opacity-60"></span>
+                    <span className="w-3 h-3 bg-white rounded-full opacity-60"></span>
+                    <span className="w-3 h-3 bg-white rounded-full"></span>
+                  </div>
+                </div>
+
+                {/* Notification Banner Simulator */}
+                <div className="mt-4 mx-2">
+                  <div className="bg-white/90 backdrop-blur-md rounded-2xl p-3 shadow-lg border border-gray-100 flex gap-3 animate-in slide-in-from-top-4 duration-700">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-lg">
+                      P
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-semibold text-sm text-gray-900 truncate pr-2">
+                          {form.title || 'Título de ejemplo'}
+                        </h4>
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">Ahora</span>
+                      </div>
+                      <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                        {form.body ||
+                          'Aquí aparecerá el contenido de tu mensaje push cuando lo escribas...'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fondo de pantalla difuminado */}
+                <div className="absolute inset-0 -z-10 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 pointer-events-none" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-xl p-6">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white text-sm mb-2">
-                    Información importante
-                  </h3>
-                  <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                    <li>• Solo usuarios con PWA instalada recibirán notificaciones</li>
-                    <li>• Las notificaciones se envían a todos los dispositivos activos</li>
-                    <li>• El título máximo es 50 caracteres</li>
-                    <li>• El mensaje máximo es 150 caracteres</li>
-                  </ul>
-                </div>
-              </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+              <h4 className="font-semibold text-blue-800 dark:text-blue-300 text-sm mb-1 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Próximamente
+              </h4>
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                La programación de envíos y estadísticas de apertura estarán disponibles en la v2.0
+                del panel.
+              </p>
             </div>
           </div>
         </div>

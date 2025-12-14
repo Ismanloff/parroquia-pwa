@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
             notification: {
               icon: payload.icon || '/icons/icon-192x192.png',
               badge: payload.badge || '/icons/icon-72x72.png',
+              image: payload.image || undefined, // Soporte para imagen en notification panel
             },
             fcmOptions: {
               link: payload.url || '/',
