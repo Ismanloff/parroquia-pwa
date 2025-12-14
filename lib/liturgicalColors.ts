@@ -11,7 +11,7 @@ export interface LiturgicalSeason {
 }
 
 const liturgicalColors: Record<LiturgicalColor, string[]> = {
-  purple: ['#6D28D9', '#4C1D95'], // Morado Profundo - Adviento y Cuaresma
+  purple: ['#4B1E78', '#3B1761'], // Morado Profundo - Adviento y Cuaresma
   green: ['#10B981', '#059669'], // Verde - Tiempo Ordinario
   white: ['#F3F4F6', '#E5E7EB'], // Blanco - Navidad y Pascua
   red: ['#EF4444', '#DC2626'], // Rojo - Pentecostés, mártires

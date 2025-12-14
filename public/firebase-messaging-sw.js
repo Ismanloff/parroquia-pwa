@@ -14,6 +14,7 @@ firebase.initializeApp({
   storageBucket: 'app-parro-pwa.firebasestorage.app',
   messagingSenderId: '69430795605',
   appId: '1:69430795605:web:c4b700394107eeed5023dc',
+  measurementId: 'G-GK2EKZHMSL',
 });
 
 const messaging = firebase.messaging();
