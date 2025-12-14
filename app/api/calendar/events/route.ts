@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ICAL from 'ical.js';
 
-const CALENDAR_URL = process.env.GOOGLE_CALENDAR_ICS_URL ||
-  'https://calendar.google.com/calendar/ical/2ca61dd15b0992030db91fe0df4c6f59720ac5901439d6227dfef642c33c0986%40group.calendar.google.com/public/basic.ics';
+const CALENDAR_URL =
+  process.env.GOOGLE_CALENDAR_ICS_URL ||
+  'https://calendar.google.com/calendar/ical/343cc18bcdaf62c1dedecab354763c9da46d8bcb3291037884db08a06f911dd6%40group.calendar.google.com/public/basic.ics';
 
 // Cache para no hacer requests constantes a Google
 let cachedEvents: any[] | null = null;
@@ -31,23 +32,61 @@ async function fetchAndParseICS(): Promise<CalendarEvent[]> {
     const comp = new ICAL.Component(jcalData);
     const vevents = comp.getAllSubcomponents('vevent');
 
-    const events: CalendarEvent[] = vevents.map((vevent) => {
+    const events: CalendarEvent[] = [];
+
+    // Rango de expansión: 1 mes atrás hasta 1 año adelante
+    // Esto es necesario para "desplegar" los eventos repetitivos
+    const now = new Date();
+    const rangeStart = new Date(now);
+    rangeStart.setMonth(rangeStart.getMonth() - 1);
+    const rangeEnd = new Date(now);
+    rangeEnd.setFullYear(rangeEnd.getFullYear() + 1);
+
+    vevents.forEach((vevent) => {
       const event = new ICAL.Event(vevent);
-      const startDate = event.startDate;
-      const endDate = event.endDate;
 
-      // Detectar si es un evento de todo el día
-      const allDay = !startDate.hour && !startDate.minute;
+      if (event.isRecurring()) {
+        const iterator = event.iterator();
+        let next;
 
-      return {
-        id: event.uid,
-        title: event.summary || 'Sin título',
-        start: startDate.toJSDate().toISOString(),
-        end: endDate.toJSDate().toISOString(),
-        location: event.location || undefined,
-        description: event.description || undefined,
-        allDay,
-      };
+        while ((next = iterator.next())) {
+          const startDate = next;
+          const jsDate = startDate.toJSDate();
+
+          if (jsDate > rangeEnd) break;
+          if (jsDate < rangeStart) continue;
+
+          const endDate = next.clone();
+          endDate.addDuration(event.duration);
+
+          events.push({
+            id: `${event.uid}_${jsDate.getTime()}`,
+            title: event.summary || 'Sin título',
+            start: jsDate.toISOString(),
+            end: endDate.toJSDate().toISOString(),
+            location: event.location || undefined,
+            description: event.description || undefined,
+            allDay: !startDate.hour && !startDate.minute,
+          });
+        }
+      } else {
+        const startDate = event.startDate;
+        const endDate = event.endDate;
+        const jsDate = startDate.toJSDate();
+
+        // Incluir solo si es relevante (no muy antiguo) o futuro
+        if (jsDate >= rangeStart || endDate.toJSDate() >= rangeStart) {
+          events.push({
+            id: event.uid,
+            title: event.summary || 'Sin título',
+            start: jsDate.toISOString(),
+            end: endDate.toJSDate().toISOString(),
+            location: event.location || undefined,
+            description: event.description || undefined,
+            allDay: !startDate.hour && !startDate.minute,
+          });
+        }
+      }
     });
 
     // Ordenar por fecha de inicio
@@ -64,7 +103,7 @@ async function getEvents(): Promise<CalendarEvent[]> {
   const now = Date.now();
 
   // Usar caché si es reciente
-  if (cachedEvents && (now - lastFetch) < CACHE_DURATION) {
+  if (cachedEvents && now - lastFetch < CACHE_DURATION) {
     return cachedEvents;
   }
 
@@ -96,7 +135,7 @@ export async function GET(request: NextRequest) {
     let filteredEvents = allEvents;
 
     // Filtrar eventos futuros o actuales (usar start para eventos que aún no comenzaron)
-    filteredEvents = filteredEvents.filter(event => {
+    filteredEvents = filteredEvents.filter((event) => {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       // Incluir si el evento aún no ha terminado
@@ -117,7 +156,7 @@ export async function GET(request: NextRequest) {
       sevenDaysLater.setDate(today.getDate() + 6);
       sevenDaysLater.setHours(23, 59, 59, 999);
 
-      filteredEvents = filteredEvents.filter(event => {
+      filteredEvents = filteredEvents.filter((event) => {
         const eventStart = new Date(event.start);
         return eventStart >= today && eventStart <= sevenDaysLater;
       });
@@ -130,7 +169,7 @@ export async function GET(request: NextRequest) {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-      filteredEvents = filteredEvents.filter(event => {
+      filteredEvents = filteredEvents.filter((event) => {
         const eventStart = new Date(event.start);
         return eventStart >= firstDay && eventStart <= lastDay;
       });
@@ -138,10 +177,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       events: filteredEvents,
-      cached: (Date.now() - lastFetch) < CACHE_DURATION,
+      cached: Date.now() - lastFetch < CACHE_DURATION,
       lastUpdate: new Date(lastFetch).toISOString(),
     });
-
   } catch (error: any) {
     console.error('Error fetching calendar events:', error);
     return NextResponse.json(

@@ -1,12 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, BellOff, CheckCircle, AlertCircle, Loader, ArrowLeft } from 'lucide-react';
+import {
+  Bell,
+  BellOff,
+  CheckCircle,
+  AlertCircle,
+  Loader,
+  ArrowLeft,
+  Smartphone,
+} from 'lucide-react';
 import { setupPushNotifications, onMessageListener } from '@/lib/firebase/messaging';
+import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { toast } from '@/lib/toast';
 import Link from 'next/link';
 
 export default function NotificationsSettingsPage() {
+  const { isInstalled } = useInstallPrompt();
   const [notificationStatus, setNotificationStatus] = useState<
     'loading' | 'granted' | 'denied' | 'default'
   >('loading');
@@ -61,6 +71,44 @@ export default function NotificationsSettingsPage() {
       setIsActivating(false);
     }
   };
+
+  // Si no está instalada, mostrar mensaje informativo
+  if (!isInstalled) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-8">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Volver al inicio
+            </Link>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-8 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Smartphone className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
+              Instala la aplicación
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              Las notificaciones solo están disponibles cuando instalas la aplicación en tu
+              dispositivo.
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+            >
+              Ir al inicio
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 py-8 px-4">

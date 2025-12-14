@@ -1,6 +1,7 @@
 'use client';
 
 import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
+import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { Download, X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -16,13 +17,15 @@ import { useState } from 'react';
  * - Botón "Más tarde" oculta el banner (volverá a aparecer)
  * - Diseño moderno con efecto glass y animación
  * - Se posiciona sobre el menú de navegación
+ * - Solo se muestra cuando la PWA está instalada
  */
 export function UpdateBanner() {
   const { updateAvailable, updateServiceWorker } = useServiceWorker();
+  const { isInstalled } = useInstallPrompt();
   const [dismissed, setDismissed] = useState(false);
 
-  // No mostrar si no hay actualización o si fue desestimado
-  if (!updateAvailable || dismissed) {
+  // No mostrar si no hay actualización, si fue desestimado, o si no está instalada como PWA
+  if (!updateAvailable || dismissed || !isInstalled) {
     return null;
   }
 

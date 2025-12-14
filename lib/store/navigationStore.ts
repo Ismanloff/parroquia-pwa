@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type TabType = 'home' | 'calendar' | 'chat' | 'settings';
+export type TabType = 'home' | 'calendar' | 'settings';
 
 interface NavigationStore {
   activeTab: TabType;

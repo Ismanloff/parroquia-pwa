@@ -11,7 +11,7 @@ export interface LiturgicalSeason {
 }
 
 const liturgicalColors: Record<LiturgicalColor, string[]> = {
-  purple: ['#8B5CF6', '#6366F1'], // Morado - Adviento y Cuaresma
+  purple: ['#6D28D9', '#4C1D95'], // Morado Profundo - Adviento y Cuaresma
   green: ['#10B981', '#059669'], // Verde - Tiempo Ordinario
   white: ['#F3F4F6', '#E5E7EB'], // Blanco - Navidad y Pascua
   red: ['#EF4444', '#DC2626'], // Rojo - Pentecostés, mártires
@@ -32,13 +32,14 @@ export function getLiturgicalSeason(date: Date): LiturgicalSeason {
   // AÑO 2025
   if (year === 2025) {
     // ADVIENTO 2025: 30 nov - 24 dic
-    if (
-      (month === 11 && day >= 30) ||
-      (month === 12 && day <= 24)
-    ) {
+    if ((month === 11 && day >= 30) || (month === 12 && day <= 24)) {
       // III Domingo de Adviento (Gaudete): 14 dic - rosado
       if (month === 12 && day === 14) {
-        return { name: 'III Domingo de Adviento (Gaudete)', color: 'rose', gradient: liturgicalColors.rose };
+        return {
+          name: 'III Domingo de Adviento (Gaudete)',
+          color: 'rose',
+          gradient: liturgicalColors.rose,
+        };
       }
       return { name: 'Adviento', color: 'purple', gradient: liturgicalColors.purple };
     }
@@ -57,22 +58,19 @@ export function getLiturgicalSeason(date: Date): LiturgicalSeason {
     }
 
     // TIEMPO ORDINARIO (primera parte): 12 ene - 17 feb
-    if (
-      (month === 1 && day >= 12) ||
-      (month === 2 && day <= 17)
-    ) {
+    if ((month === 1 && day >= 12) || (month === 2 && day <= 17)) {
       return { name: 'Tiempo Ordinario', color: 'green', gradient: liturgicalColors.green };
     }
 
     // CUARESMA: 18 feb - 2 abr (mañana)
-    if (
-      (month === 2 && day >= 18) ||
-      (month === 3) ||
-      (month === 4 && day <= 2)
-    ) {
+    if ((month === 2 && day >= 18) || month === 3 || (month === 4 && day <= 2)) {
       // IV Domingo de Cuaresma (Laetare): 15 marzo - rosado
       if (month === 3 && day === 15) {
-        return { name: 'IV Domingo de Cuaresma (Laetare)', color: 'rose', gradient: liturgicalColors.rose };
+        return {
+          name: 'IV Domingo de Cuaresma (Laetare)',
+          color: 'rose',
+          gradient: liturgicalColors.rose,
+        };
       }
       return { name: 'Cuaresma', color: 'purple', gradient: liturgicalColors.purple };
     }
@@ -122,11 +120,7 @@ export function getLiturgicalSeason(date: Date): LiturgicalSeason {
     }
 
     // TIEMPO ORDINARIO (segunda parte): 25 mayo - 21 noviembre
-    if (
-      (month === 5 && day >= 25) ||
-      (month >= 6 && month <= 10) ||
-      (month === 11 && day <= 21)
-    ) {
+    if ((month === 5 && day >= 25) || (month >= 6 && month <= 10) || (month === 11 && day <= 21)) {
       // Solemnidades especiales
       // Santísima Trinidad: 31 mayo - blanco
       if (month === 5 && day === 31) {
@@ -138,7 +132,11 @@ export function getLiturgicalSeason(date: Date): LiturgicalSeason {
       }
       // Sagrado Corazón: 12 junio - blanco
       if (month === 6 && day === 12) {
-        return { name: 'Sagrado Corazón de Jesús', color: 'white', gradient: liturgicalColors.white };
+        return {
+          name: 'Sagrado Corazón de Jesús',
+          color: 'white',
+          gradient: liturgicalColors.white,
+        };
       }
       // Todos los Santos: 1 noviembre - blanco
       if (month === 11 && day === 1) {
@@ -158,13 +156,14 @@ export function getLiturgicalSeason(date: Date): LiturgicalSeason {
     }
 
     // ADVIENTO 2026: 29 nov - 24 dic
-    if (
-      (month === 11 && day >= 29) ||
-      (month === 12 && day <= 24)
-    ) {
+    if ((month === 11 && day >= 29) || (month === 12 && day <= 24)) {
       // III Domingo de Adviento (Gaudete): 13 dic - rosado
       if (month === 12 && day === 13) {
-        return { name: 'III Domingo de Adviento (Gaudete)', color: 'rose', gradient: liturgicalColors.rose };
+        return {
+          name: 'III Domingo de Adviento (Gaudete)',
+          color: 'rose',
+          gradient: liturgicalColors.rose,
+        };
       }
       return { name: 'Adviento', color: 'purple', gradient: liturgicalColors.purple };
     }

@@ -3,16 +3,8 @@
 // DELETE: Elimina tokens inválidos o específicos
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { messaging } from '@/lib/firebase/admin';
-
-// Cliente Supabase con service_role para acceder a tokens
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { getMessaging, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
 
 // Helper para detectar plataforma
 const getPlatformFromUA = (userAgent: string | null): string => {
@@ -54,8 +46,15 @@ const parseUserAgent = (userAgent: string | null): { browser?: string; os?: stri
 /**
  * GET: Lista todos los tokens con información detallada
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
+    // Verificar configuración
+    if (!isSupabaseAdminConfigured()) {
+      return NextResponse.json({ error: 'Supabase Admin no está configurado.' }, { status: 500 });
+    }
+
+    const supabase = getSupabaseAdmin();
+
     // Obtener todos los tokens de la base de datos
     const { data: tokens, error: dbError } = await supabase
       .from('push_tokens')
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Enriquecer información de cada token
-    const enrichedTokens = tokens.map((token) => {
+    const enrichedTokens = (tokens || []).map((token) => {
       const platform = getPlatformFromUA(token.user_agent);
       const { browser, os } = parseUserAgent(token.user_agent);
 
@@ -89,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      total: tokens.length,
+      total: tokens?.length || 0,
       tokens: enrichedTokens,
     });
   } catch (error) {
@@ -103,10 +102,26 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Verificar configuración
+    if (!isSupabaseAdminConfigured()) {
+      return NextResponse.json({ error: 'Supabase Admin no está configurado.' }, { status: 500 });
+    }
+
+    const supabase = getSupabaseAdmin();
     const body = await request.json();
     const { tokenId, deleteInvalid } = body;
 
     if (deleteInvalid) {
+      // Verificar que Firebase está configurado para validar tokens
+      if (!isFirebaseAdminConfigured()) {
+        return NextResponse.json(
+          { error: 'Firebase Admin no está configurado. No se pueden validar tokens.' },
+          { status: 500 }
+        );
+      }
+
+      const messaging = getMessaging();
+
       // Verificar todos los tokens y eliminar los inválidos
       const { data: tokens, error: dbError } = await supabase.from('push_tokens').select('*');
 
@@ -125,7 +140,7 @@ export async function DELETE(request: NextRequest) {
 
       console.log(`🔍 Verificando ${tokens.length} tokens...`);
 
-      const invalidTokenIds: number[] = [];
+      const invalidTokenIds: string[] = [];
 
       // Verificar cada token enviando una notificación de prueba
       for (const tokenData of tokens) {
@@ -142,8 +157,8 @@ export async function DELETE(request: NextRequest) {
             true // dryRun: true - No envía realmente la notificación
           );
           console.log(`✅ Token ${tokenData.id} es válido`);
-        } catch (error: any) {
-          const errorMessage = error?.message || String(error);
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           if (
             errorMessage.includes('Requested entity was not found') ||
             errorMessage.includes('registration-token-not-registered') ||

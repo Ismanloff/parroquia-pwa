@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, X, Sparkles } from 'lucide-react';
 import { setupPushNotifications, onMessageListener } from '@/lib/firebase/messaging';
+import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { toast } from '@/lib/toast';
 
 const PROMPT_DISMISSED_KEY = 'notification_prompt_dismissed';
@@ -10,11 +11,17 @@ const PROMPT_DISMISSED_TIMESTAMP_KEY = 'notification_prompt_dismissed_timestamp'
 const DISMISSAL_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 días
 
 export function NotificationPrompt() {
+  const { isInstalled } = useInstallPrompt();
   const [showPrompt, setShowPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
+    // Solo mostrar si la PWA está instalada
+    if (!isInstalled) {
+      return;
+    }
+
     // Verificar si ya tiene permisos concedidos
     if (typeof window === 'undefined' || !('Notification' in window)) {
       return;
@@ -61,7 +68,7 @@ export function NotificationPrompt() {
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isInstalled]);
 
   const handleActivate = async () => {
     setIsLoading(true);

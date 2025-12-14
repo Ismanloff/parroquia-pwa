@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageCircle, Calendar, Home, Settings } from 'lucide-react';
+import { Calendar, Home, Settings } from 'lucide-react';
 import { useNavigationStore, type TabType } from '@/lib/store/navigationStore';
 import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
@@ -17,12 +17,6 @@ const tabs = [
     label: 'Calendario',
     icon: Calendar,
     ariaLabel: 'Calendario - Ver eventos parroquiales',
-  },
-  {
-    id: 'chat' as TabType,
-    label: 'Chat',
-    icon: MessageCircle,
-    ariaLabel: 'Chat - Preguntar al asistente parroquial',
   },
   {
     id: 'settings' as TabType,

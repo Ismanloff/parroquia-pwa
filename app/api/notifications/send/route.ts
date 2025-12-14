@@ -3,16 +3,8 @@
 // Usa Firebase Admin SDK (HTTP v1 API) en lugar de Server Key (legacy)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { messaging } from '@/lib/firebase/admin';
-
-// Cliente Supabase con service_role para acceder a tokens
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
+import { messaging, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
 
 interface NotificationPayload {
   title: string;
@@ -29,6 +21,27 @@ interface NotificationPayload {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verificar configuración antes de proceder
+    if (!isSupabaseAdminConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            'Supabase Admin no está configurado. Agrega SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.',
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!isFirebaseAdminConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            'Firebase Admin no está configurado. Agrega FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY.',
+        },
+        { status: 500 }
+      );
+    }
+
     const payload: NotificationPayload = await request.json();
 
     // Validar payload
@@ -36,8 +49,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'title y body son requeridos' }, { status: 400 });
     }
 
-    // Obtener todos los tokens de la base de datos
-    const { data: tokens, error: dbError } = await supabase.from('push_tokens').select('token');
+    const supabase = getSupabaseAdmin();
+
+    // Obtener todos los tokens de la base de datos con información del dispositivo
+    const { data: tokens, error: dbError } = await supabase
+      .from('push_tokens')
+      .select('id, token, user_agent, created_at, last_used');
 
     if (dbError) {
       console.error('Error al obtener tokens:', dbError);
@@ -59,6 +76,18 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`📤 Enviando notificación a ${tokens.length} dispositivos`);
+
+    // Helper para detectar plataforma desde user agent
+    const getPlatformFromUA = (userAgent: string | null): string => {
+      if (!userAgent) return 'Desconocido';
+      const ua = userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) return 'iOS';
+      if (/android/.test(ua)) return 'Android';
+      if (/macintosh/.test(ua)) return 'macOS';
+      if (/windows/.test(ua)) return 'Windows';
+      if (/linux/.test(ua)) return 'Linux';
+      return 'Desconocido';
+    };
 
     // Enviar notificaciones usando Firebase Admin SDK
     const results = await Promise.allSettled(
@@ -88,10 +117,54 @@ export async function POST(request: NextRequest) {
     const successful = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
 
-    // Log errores específicos
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        console.error(`❌ Token ${index} falló:`, result.reason);
+    // Log detallado de cada envío
+    const detailedResults = results.map((result, index) => {
+      const tokenData = tokens[index];
+      if (!tokenData) {
+        console.error(`❌ Token ${index} no encontrado en el array`);
+        return null;
+      }
+
+      const platform = getPlatformFromUA(tokenData.user_agent);
+      const tokenPreview = tokenData.token.substring(0, 20) + '...';
+
+      if (result.status === 'fulfilled') {
+        console.log(`✅ [${platform}] Token ${tokenPreview} - Enviado exitosamente`);
+        return {
+          success: true,
+          platform,
+          tokenId: tokenData.id,
+          tokenPreview,
+          userAgent: tokenData.user_agent,
+          lastUsed: tokenData.last_used,
+        };
+      } else {
+        const error = result.reason;
+        const errorMessage = error?.message || String(error);
+        console.error(`❌ [${platform}] Token ${tokenPreview} - Error: ${errorMessage}`);
+        console.error(`   User Agent: ${tokenData.user_agent}`);
+        console.error(`   Token ID: ${tokenData.id}`);
+        console.error(`   Last Used: ${tokenData.last_used}`);
+
+        // Detectar errores específicos de iOS/APNs
+        if (
+          errorMessage.includes('Requested entity was not found') ||
+          errorMessage.includes('registration-token-not-registered')
+        ) {
+          console.error(
+            `   ⚠️  Token inválido o expirado - Se recomienda eliminarlo de la base de datos`
+          );
+        }
+
+        return {
+          success: false,
+          platform,
+          tokenId: tokenData.id,
+          tokenPreview,
+          userAgent: tokenData.user_agent,
+          lastUsed: tokenData.last_used,
+          error: errorMessage,
+        };
       }
     });
 
@@ -102,6 +175,7 @@ export async function POST(request: NextRequest) {
       total: tokens.length,
       successful,
       failed,
+      details: detailedResults.filter(Boolean),
     });
   } catch (error) {
     console.error('❌ Error al enviar notificaciones:', error);

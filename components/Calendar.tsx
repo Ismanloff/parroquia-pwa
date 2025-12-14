@@ -34,12 +34,48 @@ type CalendarEvent = {
 
 // Colores para eventos - Paleta suave inspirada en iOS
 const EVENT_COLORS = [
-  { primary: '#007AFF', light: '#E5F1FF', border: '#66A3FF' }, // systemBlue
-  { primary: '#5AC8FA', light: '#E0F5FF', border: '#8CD8FA' }, // systemTeal
-  { primary: '#34C759', light: '#E3F9E5', border: '#7ADB89' }, // systemGreen
-  { primary: '#30B0C7', light: '#E0F4F7', border: '#6AC5D4' }, // systemCyan
-  { primary: '#5856D6', light: '#EEEEFF', border: '#8B8AE8' }, // systemIndigo
-  { primary: '#AF52DE', light: '#F5E6FF', border: '#C98AE8' }, // systemPurple
+  {
+    primary: '#007AFF',
+    light: '#E5F1FF',
+    border: '#B3D7FF',
+    gradient: 'from-blue-500 to-blue-600',
+  }, // Azure Blue
+  {
+    primary: '#5AC8FA',
+    light: '#E0F5FF',
+    border: '#BFEAFE',
+    gradient: 'from-cyan-400 to-cyan-500',
+  }, // Sky Cyan
+  {
+    primary: '#34C759',
+    light: '#E3F9E5',
+    border: '#A8EBB4',
+    gradient: 'from-green-500 to-green-600',
+  }, // Mint Green
+  {
+    primary: '#5856D6',
+    light: '#EEEEFF',
+    border: '#C2C1F2',
+    gradient: 'from-indigo-500 to-indigo-600',
+  }, // Deep Indigo
+  {
+    primary: '#AF52DE',
+    light: '#F5E6FF',
+    border: '#E2C2F5',
+    gradient: 'from-purple-500 to-purple-600',
+  }, // Rich Purple
+  {
+    primary: '#FF2D55',
+    light: '#FFE6EA',
+    border: '#FFB3C2',
+    gradient: 'from-pink-500 to-pink-600',
+  }, // Vibrant Pink
+  {
+    primary: '#FF9500',
+    light: '#FFF5E0',
+    border: '#FFDCA8',
+    gradient: 'from-orange-400 to-orange-500',
+  }, // Sunset Orange
 ];
 
 const getEventColor = (eventTitle: string) => {
@@ -503,14 +539,12 @@ END:VCALENDAR`;
                       </div>
                     </div>
 
-                    {/* Timeline de eventos con línea visual */}
-                    <div className="relative">
-                      {/* Línea vertical del timeline */}
-                      {events.length > 1 && (
-                        <div className="absolute left-5 top-7 bottom-7 w-0.5 bg-gradient-to-b from-slate-200 via-slate-300 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700 rounded-full z-0" />
-                      )}
+                    {/* Timeline de eventos con diseño mejorado 2025 */}
+                    <div className="relative pl-4">
+                      {/* Línea vertical del timeline con gradiente */}
+                      <div className="absolute left-0 top-2 bottom-4 w-0.5 bg-gradient-to-b from-slate-200 via-slate-300 to-transparent dark:from-slate-700 dark:via-slate-600 rounded-full" />
 
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         {events.map((event, index) => {
                           const colors = getEventColor(event.title);
                           const badge = getEventBadge(new Date(event.start));
@@ -519,101 +553,88 @@ END:VCALENDAR`;
                             <button
                               key={event.id}
                               onClick={() => setSelectedEvent(event)}
-                              className="w-full text-left group"
+                              className="w-full text-left group relative"
                             >
+                              {/* Connector dot */}
                               <div
-                                className="flex bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-white/30 dark:border-slate-700/30 group-hover:scale-[1.01]"
-                                style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-                              >
-                                {/* Barra lateral de color con glow effect */}
-                                <div
-                                  className="w-1.5 flex-shrink-0 relative"
-                                  style={{
-                                    backgroundColor: colors.primary,
-                                  }}
-                                >
-                                  <div
-                                    className="absolute inset-0 blur-sm opacity-60"
-                                    style={{ backgroundColor: colors.primary }}
-                                  />
-                                </div>
+                                className="absolute -left-[21px] top-6 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800 shadow-sm z-10 transition-transform group-hover:scale-125"
+                                style={{ backgroundColor: colors.primary }}
+                              />
 
-                                <div className="flex-1 p-5">
-                                  {/* Header del evento */}
-                                  <div className="flex items-start justify-between mb-3">
-                                    <h3 className="flex-1 text-[17px] font-semibold text-slate-900 dark:text-white leading-snug tracking-tight pr-3">
-                                      {event.title}
-                                    </h3>
-                                    {badge && (
-                                      <div
-                                        className="px-2.5 py-1.5 rounded-xl shadow-sm flex-shrink-0"
-                                        style={{ backgroundColor: badge.bgColor }}
-                                      >
-                                        <span
-                                          className="text-[10px] font-extrabold tracking-wider"
-                                          style={{ color: badge.color }}
-                                        >
-                                          {badge.text}
+                              <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-700/50 group-hover:-translate-y-0.5">
+                                {/* Fondo con gradiente muy sutil */}
+                                <div
+                                  className="absolute inset-0 opacity-[0.03]"
+                                  style={{ backgroundColor: colors.primary }}
+                                />
+
+                                <div className="p-4 sm:p-5 flex gap-4">
+                                  {/* Columna de hora */}
+                                  <div className="flex flex-col items-center justify-start pt-1 min-w-[3.5rem] border-r border-slate-100 dark:border-slate-700/50 pr-4">
+                                    {!event.allDay ? (
+                                      <>
+                                        <span className="text-sm font-bold text-slate-900 dark:text-white leading-none">
+                                          {formatTime(event.start)}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-1 leading-none">
+                                          {formatTime(event.end)}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <div className="flex flex-col items-center">
+                                        <span className="text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                                          Todo
+                                        </span>
+                                        <span className="text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                                          el día
                                         </span>
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* Descripción */}
-                                  {event.description && (
-                                    <p className="text-[15px] text-slate-600 dark:text-slate-400 mb-3.5 line-clamp-2 leading-relaxed tracking-tight">
-                                      {event.description}
-                                    </p>
-                                  )}
-
-                                  {/* Metadata - Pills con glassmorphism */}
-                                  <div className="flex flex-wrap gap-3 items-center">
-                                    {!event.allDay && (
-                                      <div
-                                        className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm"
-                                        style={{ backgroundColor: colors.light }}
-                                      >
-                                        <Clock
-                                          className="w-4 h-4"
-                                          style={{ color: colors.primary }}
-                                          strokeWidth={2.5}
-                                        />
+                                  {/* Contenido principal */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                      <h3 className="text-[16px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight truncate pr-1">
+                                        {event.title}
+                                      </h3>
+                                      {badge && (
                                         <span
-                                          className="text-sm font-semibold tracking-tight"
-                                          style={{ color: colors.primary }}
+                                          className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide uppercase shadow-sm"
+                                          style={{
+                                            backgroundColor: badge.bgColor,
+                                            color: badge.color,
+                                          }}
                                         >
-                                          {formatTime(event.start)}
+                                          {badge.text}
                                         </span>
-                                      </div>
-                                    )}
+                                      )}
+                                    </div>
 
                                     {event.location && (
-                                      <div className="flex items-center gap-2">
-                                        <MapPin
-                                          className="w-4 h-4 text-slate-400 dark:text-slate-500"
-                                          strokeWidth={2.5}
-                                        />
-                                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400 tracking-tight">
+                                      <div className="flex items-center gap-1.5 mb-2 text-slate-500 dark:text-slate-400">
+                                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="text-xs font-medium truncate">
                                           {event.location}
                                         </span>
                                       </div>
                                     )}
 
-                                    {event.allDay && (
-                                      <div
-                                        className="px-3 py-2 rounded-xl backdrop-blur-sm"
-                                        style={{ backgroundColor: colors.light }}
-                                      >
-                                        <span
-                                          className="text-[11px] font-bold tracking-wider"
-                                          style={{ color: colors.primary }}
-                                        >
-                                          TODO EL DÍA
-                                        </span>
-                                      </div>
+                                    {event.description && (
+                                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                                        {event.description}
+                                      </p>
                                     )}
                                   </div>
                                 </div>
+
+                                {/* Bottom Accent Line */}
+                                <div
+                                  className="absolute bottom-0 left-0 right-0 h-[2px] opacity-80"
+                                  style={{
+                                    background: `linear-gradient(90deg, ${colors.primary}, transparent)`,
+                                  }}
+                                />
                               </div>
                             </button>
                           );
@@ -740,48 +761,64 @@ END:VCALENDAR`;
               })}
             </div>
 
-            {/* Lista de eventos del día seleccionado */}
+            {/* Lista de eventos del día seleccionado con diseño 2025 */}
             <div
               ref={eventsListRef}
               className="pt-5 border-t border-slate-200/60 dark:border-slate-700/40"
             >
-              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white mb-3 tracking-wide">
+              <h3 className="text-[14px] font-bold text-slate-500 dark:text-slate-400 mb-4 tracking-wide uppercase flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4" />
                 {selectedDay
-                  ? `Eventos del ${selectedDay.getDate()} de ${dayjs(selectedDay).format('MMMM')}`
+                  ? `${dayjs(selectedDay).format('dddd D [de] MMMM')}`
                   : 'Selecciona un día'}
               </h3>
 
               {!selectedDay ? (
-                <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">
-                  Toca un día en el calendario para ver sus eventos
-                </p>
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                  <p className="text-sm text-slate-500">Toca un día para ver detalles</p>
+                </div>
               ) : getEventsForDay(selectedDay, monthEvents).length === 0 ? (
-                <p className="text-slate-500 dark:text-slate-400 text-center py-4 text-sm">
-                  No hay eventos este día
-                </p>
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2">
+                    <Clock className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Sin eventos
+                  </p>
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {getEventsForDay(selectedDay, monthEvents).map((event) => {
                     const colors = getEventColor(event.title);
                     return (
                       <button
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className="w-full text-left flex gap-3 p-3 rounded-xl border-l-4 hover:scale-[1.01] transition-all backdrop-blur-sm"
-                        style={{
-                          backgroundColor: `${colors.light}E6`,
-                          borderLeftColor: colors.primary,
-                          backdropFilter: 'blur(10px)',
-                        }}
+                        className="w-full text-left bg-white dark:bg-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/60 p-4 rounded-xl border border-slate-100 dark:border-slate-600 transition-all group shadow-sm hover:shadow-md"
                       >
-                        <div className="flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white text-sm tracking-tight">
-                            {event.title}
-                          </p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 tracking-tight">
-                            {!event.allDay ? formatTime(event.start) : 'Todo el día'}
-                            {event.location && ` • ${event.location}`}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br ${colors.gradient} text-white shrink-0`}
+                          >
+                            <span className="text-xs font-bold leading-none">
+                              {event.allDay ? 'TD' : formatTime(event.start).replace(':', '')}
+                            </span>
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-slate-900 dark:text-white text-[15px] truncate leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {event.title}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              {!event.allDay && (
+                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                  {formatTime(event.start)} - {formatTime(event.end)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-400 transition-colors" />
                         </div>
                       </button>
                     );

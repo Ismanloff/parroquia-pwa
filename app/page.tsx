@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Home as HomeComponent } from '@/components/Home';
 import { TabNavigation } from '@/components/TabNavigation';
-import { AuthScreen } from '@/components/auth';
 import { InstallBanner } from '@/components/install';
 import { useNavigationStore, type TabType } from '@/lib/store/navigationStore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,15 +22,6 @@ const Calendar = dynamic(
   }
 );
 
-const Chat = dynamic(() => import('@/components/Chat').then((mod) => ({ default: mod.Chat })), {
-  loading: () => (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Loading message="Cargando chat..." />
-    </div>
-  ),
-  ssr: false,
-});
-
 const Settings = dynamic(
   () => import('@/components/Settings').then((mod) => ({ default: mod.Settings })),
   {
@@ -46,7 +36,7 @@ const Settings = dynamic(
 
 export default function Home() {
   const { activeTab, setActiveTab } = useNavigationStore();
-  const { user, loading, isSupabaseConfigured } = useAuth();
+  const { loading, isSupabaseConfigured } = useAuth();
 
   // ✅ PWA 2025: Detectar parámetro ?tab=X para shortcuts
   useEffect(() => {
@@ -56,7 +46,7 @@ export default function Home() {
     const tabParam = params.get('tab');
 
     // Validar que el tab existe y cambiar si es necesario
-    if (tabParam && ['home', 'calendar', 'chat', 'settings'].includes(tabParam)) {
+    if (tabParam && ['home', 'calendar', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as TabType);
 
       // Limpiar URL sin recargar (opcional, para que quede limpio)
@@ -75,10 +65,8 @@ export default function Home() {
     );
   }
 
-  // Si Supabase está configurado y no hay usuario, mostrar pantallas de auth
-  if (isSupabaseConfigured && !user) {
-    return <AuthScreen />;
-  }
+  // 🎉 PWA PÚBLICA: No requerimos autenticación
+  // Si Supabase está configurado y no hay usuario, permitimos el acceso igual
 
   // Usuario autenticado o Supabase no configurado (modo demo): mostrar la app
   return (
@@ -87,7 +75,6 @@ export default function Home() {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'home' && <HomeComponent />}
         {activeTab === 'calendar' && <Calendar />}
-        {activeTab === 'chat' && <Chat />}
         {activeTab === 'settings' && <Settings />}
       </div>
 

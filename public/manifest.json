@@ -77,10 +77,10 @@
       ]
     },
     {
-      "name": "Chat Parroquial",
-      "short_name": "Chat",
-      "description": "Hablar con el asistente IA",
-      "url": "/?source=shortcut&tab=chat",
+      "name": "Asistente WhatsApp",
+      "short_name": "WhatsApp",
+      "description": "Hablar con el asistente IA por WhatsApp",
+      "url": "https://wa.me/14155982433?text=Hola,%20tengo%20una%20consulta",
       "icons": [
         {
           "src": "/icons/shortcut-chat.png",
@@ -139,7 +139,7 @@
       "sizes": "540x720",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Chat con asistente IA"
+      "label": "Ajustes y acceso a WhatsApp"
     }
   ]
 }
