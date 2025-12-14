@@ -11,13 +11,13 @@ Progressive Web App (PWA) para gestión parroquial con AI chatbot integrado.
 - **OpenAI Agents SDK** para chatbot inteligente
 - **Pinecone** para búsqueda vectorial en documentos
 - **Anthropic Claude** para query expansion
-- **Supabase** para autenticación
+- **Supabase** para autenticación y base de datos (Gospel/Saints)
 - **PWA** con soporte offline
 
 ## Características
 
 ✅ **AI Chatbot** - Asistente parroquial con búsqueda RAG en documentos
-✅ **Calendario** - Eventos parroquiales sincronizados con Google Calendar
+✅ **Calendario** - Eventos parroquiales sincronizados con Google Calendar y festividades litúrgicas
 ✅ **Autenticación** - Login/Registro con Supabase
 ✅ **PWA** - Instalable como app nativa (iOS/Android)
 ✅ **Offline** - Funciona sin conexión
@@ -69,13 +69,14 @@ AGENT_INSTRUCTIONS="Eres un chatbot parroquial..."
 # Google Calendar ICS URL
 GOOGLE_CALENDAR_ICS_URL=https://calendar.google.com/calendar/ical/...
 
-# Supabase (autenticación)
-SUPABASE_URL=https://tu-proyecto.supabase.co
+# Supabase (autenticación y Datos Litúrgicos)
+# Proyecto: wuvlujxzwfvqbegqehsh
+SUPABASE_URL=https://wuvlujxzwfvqbegqehsh.supabase.co
 SUPABASE_ANON_KEY=tu_anon_key
 SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
 
 # Variables públicas para el cliente
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://wuvlujxzwfvqbegqehsh.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
 
 # Resend (emails de autenticación)
@@ -145,6 +146,7 @@ vercel --prod
 En el dashboard de Vercel > Settings > Environment Variables, añade todas las variables de `.env.local`:
 
 **Variables requeridas:**
+
 - `OPENAI_API_KEY`
 - `OPENAI_VECTOR_STORE_ID`
 - `SUPABASE_URL`
@@ -157,6 +159,7 @@ En el dashboard de Vercel > Settings > Environment Variables, añade todas las v
 - `GOOGLE_CALENDAR_ICS_URL`
 
 **Variables opcionales:**
+
 - `CHATKIT_WORKFLOW_ID`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
@@ -202,6 +205,7 @@ public/                      # Assets estáticos
 ## Optimizaciones Implementadas
 
 ### Performance
+
 - ✅ React 19 Compiler para optimización automática
 - ✅ Turbopack para builds ultra-rápidos
 - ✅ ISR (Incremental Static Regeneration) para páginas estáticas
@@ -209,18 +213,21 @@ public/                      # Assets estáticos
 - ✅ Image optimization con next/image
 
 ### SEO
+
 - ✅ Metadata dinámica en cada página
 - ✅ Sitemap y robots.txt
 - ✅ Open Graph tags
 - ✅ Structured data
 
 ### PWA
+
 - ✅ Service Worker para offline support
 - ✅ App Manifest configurado
 - ✅ Installable prompt
 - ✅ Push notifications ready
 
 ### UX
+
 - ✅ Pull-to-refresh en móvil
 - ✅ Haptic feedback (iOS)
 - ✅ Toast notifications
