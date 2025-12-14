@@ -1,7 +1,4 @@
 {
-  "projectSettings": {
-    "framework": "nextjs"
-  },
   "github": {
     "silent": true
   }
