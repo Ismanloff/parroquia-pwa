@@ -48,6 +48,7 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     'public/sw.js',
     'public/workbox-*.js',
+    'public/swe-worker-*.js',
     '.vitest/**',
     'coverage/**',
   ]),

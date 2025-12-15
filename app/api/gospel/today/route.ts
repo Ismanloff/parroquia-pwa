@@ -55,6 +55,7 @@ export async function GET(_request: NextRequest) {
 
     // Datos encontrados en Supabase
     const gospelData = data as GospelRecord;
+
     return NextResponse.json({
       success: true,
       date: targetDate,

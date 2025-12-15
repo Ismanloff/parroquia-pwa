@@ -20,6 +20,29 @@ interface CalendarEvent {
   allDay: boolean;
 }
 
+function isValidDate(date: Date) {
+  return !Number.isNaN(date.getTime());
+}
+
+function parseDateParam(value: string | null): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return isValidDate(date) ? date : null;
+}
+
+function normalizeRange(start: Date, end: Date) {
+  return start.getTime() <= end.getTime() ? { start, end } : { start: end, end: start };
+}
+
+function overlapsRange(event: CalendarEvent, rangeStart: Date, rangeEnd: Date) {
+  const eventStart = new Date(event.start);
+  const eventEnd = new Date(event.end);
+
+  if (!isValidDate(eventStart) || !isValidDate(eventEnd)) return false;
+
+  return eventStart <= rangeEnd && eventEnd >= rangeStart;
+}
+
 async function fetchAndParseICS(): Promise<CalendarEvent[]> {
   try {
     const response = await fetch(CALENDAR_URL);
@@ -118,9 +141,21 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter'); // 'upcoming', 'week', 'month'
-    const date = searchParams.get('date'); // For month filter
+    const date = searchParams.get('date'); // For month/week filter
     const limit = searchParams.get('limit'); // For upcoming filter
     const forceRefresh = searchParams.get('refresh') === 'true'; // Forzar actualización
+    const startParam = searchParams.get('start');
+    const endParam = searchParams.get('end');
+
+    const parsedStart = parseDateParam(startParam);
+    const parsedEnd = parseDateParam(endParam);
+
+    if ((startParam || endParam) && (!parsedStart || !parsedEnd)) {
+      return NextResponse.json(
+        { error: 'Parámetros start/end inválidos. Usa fechas ISO (ej: 2025-01-31T00:00:00.000Z)' },
+        { status: 400 }
+      );
+    }
 
     // Si se solicita refresh, invalidar caché
     if (forceRefresh) {
@@ -130,49 +165,53 @@ export async function GET(request: NextRequest) {
     }
 
     const allEvents = await getEvents();
-    const now = new Date();
 
     let filteredEvents = allEvents;
 
-    // Filtrar eventos futuros o actuales (usar start para eventos que aún no comenzaron)
-    filteredEvents = filteredEvents.filter((event) => {
-      const eventStart = new Date(event.start);
-      const eventEnd = new Date(event.end);
-      // Incluir si el evento aún no ha terminado
-      return eventEnd >= now || eventStart >= now;
-    });
+    // ✅ Rango explícito (para UI de calendario): NO filtramos por "futuros" aquí,
+    // devolvemos todo lo que solape el rango pedido.
+    if (parsedStart && parsedEnd) {
+      const { start, end } = normalizeRange(parsedStart, parsedEnd);
+      filteredEvents = filteredEvents.filter((event) => overlapsRange(event, start, end));
+    }
 
     // Aplicar filtros
-    if (filter === 'upcoming') {
+    if (!parsedStart && !parsedEnd && filter === 'upcoming') {
+      const now = new Date();
+      filteredEvents = filteredEvents.filter((event) => new Date(event.end) >= now);
       const limitNum = limit ? parseInt(limit) : 5;
       filteredEvents = filteredEvents.slice(0, limitNum);
-    } else if (filter === 'week') {
-      // Eventos de los próximos 7 días (desde hoy)
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
+    } else if (!parsedStart && !parsedEnd && filter === 'week') {
+      // Semana del `date` (o actual si no se pasa)
+      const baseDate = parseDateParam(date) ?? new Date();
 
-      // Calcular el día 7 desde hoy
-      const sevenDaysLater = new Date(today);
-      sevenDaysLater.setDate(today.getDate() + 6);
-      sevenDaysLater.setHours(23, 59, 59, 999);
+      // Semana ISO (lunes-domingo)
+      const weekStart = new Date(baseDate);
+      const diffToMonday = (weekStart.getDay() + 6) % 7; // 0=domingo -> 6, 1=lunes -> 0...
+      weekStart.setDate(weekStart.getDate() - diffToMonday);
+      weekStart.setHours(0, 0, 0, 0);
 
-      filteredEvents = filteredEvents.filter((event) => {
-        const eventStart = new Date(event.start);
-        return eventStart >= today && eventStart <= sevenDaysLater;
-      });
-    } else if (filter === 'month' && date) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      filteredEvents = filteredEvents.filter((event) => overlapsRange(event, weekStart, weekEnd));
+    } else if (!parsedStart && !parsedEnd && filter === 'month') {
       // Eventos del mes especificado
-      const targetDate = new Date(date);
+      const targetDate = parseDateParam(date) ?? new Date();
       const year = targetDate.getFullYear();
       const month = targetDate.getMonth();
 
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-      filteredEvents = filteredEvents.filter((event) => {
-        const eventStart = new Date(event.start);
-        return eventStart >= firstDay && eventStart <= lastDay;
-      });
+      filteredEvents = filteredEvents.filter((event) => overlapsRange(event, firstDay, lastDay));
+    } else if (!parsedStart && !parsedEnd && !filter) {
+      // Compatibilidad: sin filtros -> próximos eventos (comportamiento previo)
+      const now = new Date();
+      filteredEvents = filteredEvents.filter(
+        (event) => new Date(event.end) >= now || new Date(event.start) >= now
+      );
     }
 
     return NextResponse.json({

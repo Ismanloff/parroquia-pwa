@@ -80,7 +80,7 @@
       "name": "Asistente WhatsApp",
       "short_name": "WhatsApp",
       "description": "Hablar con el asistente IA por WhatsApp",
-      "url": "https://wa.me/14155982433?text=Hola,%20tengo%20una%20consulta",
+      "url": "/?source=shortcut&action=whatsapp",
       "icons": [
         {
           "src": "/icons/shortcut-chat.png",

@@ -1,972 +1,905 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Calendar as CalendarIcon,
-  Clock,
-  MapPin,
-  X,
-  List,
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
+  MapPin,
+  Clock,
   Share2,
   Download,
+  Grid3X3,
+  Loader2,
+  RefreshCw,
+  X,
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import { getLiturgicalSeason } from '@/lib/liturgicalColors';
-import { Loading } from '@/components/ui/Loading';
+import { haptics } from '@/lib/haptics';
+import { Card } from '@/components/ui/Card';
+import { EmptyCalendar, ErrorState } from '@/components/ui/EmptyState';
+import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 
 dayjs.locale('es');
 
 type ViewMode = 'week' | 'month';
 
-type CalendarEvent = {
+type ApiResponse = {
+  events: Event[];
+  cached?: boolean;
+  lastUpdate?: string;
+};
+
+type EventCategory = 'mass' | 'confession' | 'adoration' | 'meeting' | 'other';
+
+interface Event {
   id: string;
   title: string;
-  start: string;
-  end: string;
-  location?: string;
+  start: string; // ISO date string
+  end?: string;
   description?: string;
-  allDay: boolean;
+  location?: string;
+  allDay?: boolean;
+}
+
+function capitalize(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function detectCategory(title: string): EventCategory {
+  const t = title.toLowerCase();
+  if (/(misa|eucarist|eucaristía)/i.test(t)) return 'mass';
+  if (/(confes|peniten|reconcili)/i.test(t)) return 'confession';
+  if (/(adoraci|exposici|santísimo|santisimo)/i.test(t)) return 'adoration';
+  if (/(reuni[óo]n|cateques|grupo|curso|charla|aula|formaci|taller)/i.test(t)) return 'meeting';
+  return 'other';
+}
+
+const CATEGORY_META: Record<
+  EventCategory,
+  { label: string; accent: string; pill: string; dot: string }
+> = {
+  mass: {
+    label: 'Misa',
+    accent: 'bg-blue-600',
+    pill: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-200',
+    dot: 'bg-blue-500',
+  },
+  confession: {
+    label: 'Confesión',
+    accent: 'bg-violet-600',
+    pill: 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-200',
+    dot: 'bg-violet-500',
+  },
+  adoration: {
+    label: 'Adoración',
+    accent: 'bg-amber-600',
+    pill: 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200',
+    dot: 'bg-amber-500',
+  },
+  meeting: {
+    label: 'Actividad',
+    accent: 'bg-emerald-600',
+    pill: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200',
+    dot: 'bg-emerald-500',
+  },
+  other: {
+    label: 'Evento',
+    accent: 'bg-slate-500',
+    pill: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    dot: 'bg-slate-400',
+  },
 };
 
-// Colores para eventos - Paleta suave inspirada en iOS
-const EVENT_COLORS = [
-  {
-    primary: '#007AFF',
-    light: '#E5F1FF',
-    border: '#B3D7FF',
-    gradient: 'from-blue-500 to-blue-600',
-  }, // Azure Blue
-  {
-    primary: '#5AC8FA',
-    light: '#E0F5FF',
-    border: '#BFEAFE',
-    gradient: 'from-cyan-400 to-cyan-500',
-  }, // Sky Cyan
-  {
-    primary: '#34C759',
-    light: '#E3F9E5',
-    border: '#A8EBB4',
-    gradient: 'from-green-500 to-green-600',
-  }, // Mint Green
-  {
-    primary: '#5856D6',
-    light: '#EEEEFF',
-    border: '#C2C1F2',
-    gradient: 'from-indigo-500 to-indigo-600',
-  }, // Deep Indigo
-  {
-    primary: '#AF52DE',
-    light: '#F5E6FF',
-    border: '#E2C2F5',
-    gradient: 'from-purple-500 to-purple-600',
-  }, // Rich Purple
-  {
-    primary: '#FF2D55',
-    light: '#FFE6EA',
-    border: '#FFB3C2',
-    gradient: 'from-pink-500 to-pink-600',
-  }, // Vibrant Pink
-  {
-    primary: '#FF9500',
-    light: '#FFF5E0',
-    border: '#FFDCA8',
-    gradient: 'from-orange-400 to-orange-500',
-  }, // Sunset Orange
-];
+function formatEventTime(event: Event) {
+  if (event.allDay) return 'Todo el día';
+  const start = dayjs(event.start);
+  const end = event.end ? dayjs(event.end) : null;
+  if (end && end.isValid() && !end.isSame(start, 'minute')) {
+    return `${start.format('HH:mm')}–${end.format('HH:mm')}`;
+  }
+  return start.format('HH:mm');
+}
 
-const getEventColor = (eventTitle: string) => {
-  const hash = eventTitle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return EVENT_COLORS[hash % EVENT_COLORS.length] || EVENT_COLORS[0]!;
-};
+function escapeICSText(value: string) {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
 
-export function Calendar() {
+function formatICSDateTime(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getUTCFullYear()}` +
+    `${pad(date.getUTCMonth() + 1)}` +
+    `${pad(date.getUTCDate())}` +
+    `T${pad(date.getUTCHours())}` +
+    `${pad(date.getUTCMinutes())}` +
+    `${pad(date.getUTCSeconds())}Z`
+  );
+}
+
+function safeFilename(value: string) {
+  return (
+    value
+      .trim()
+      .replace(/[^\p{L}\p{N}\s._-]+/gu, '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 80) || 'evento'
+  );
+}
+
+function buildSingleEventICS(event: Event) {
+  const now = new Date();
+  const start = new Date(event.start);
+  const end = event.end ? new Date(event.end) : new Date(start.getTime() + 60 * 60 * 1000);
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Parroquia PWA//Calendario//ES',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${escapeICSText(event.id || `${start.getTime()}@parroquia-pwa`)}`,
+    `DTSTAMP:${formatICSDateTime(now)}`,
+    `DTSTART:${formatICSDateTime(start)}`,
+    `DTEND:${formatICSDateTime(end)}`,
+    `SUMMARY:${escapeICSText(event.title || 'Evento')}`,
+  ];
+
+  if (event.location) lines.push(`LOCATION:${escapeICSText(event.location)}`);
+  if (event.description) lines.push(`DESCRIPTION:${escapeICSText(event.description)}`);
+
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+
+  return lines.join('\r\n') + '\r\n';
+}
+
+function downloadTextFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+export function CalendarComponent() {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [weekEvents, setWeekEvents] = useState<CalendarEvent[]>([]);
-  const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [cursorDate, setCursorDate] = useState(() => dayjs());
+  const [selectedDate, setSelectedDate] = useState(() => dayjs());
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ cached: boolean; lastUpdate?: string } | null>(null);
+  const [activeEvent, setActiveEvent] = useState<Event | null>(null);
 
-  // Pull-to-refresh states
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
-  const touchStartY = useRef(0);
-
-  // Referencias para scroll automático
-  const eventsListRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Obtener el color litúrgico del día
-  const liturgicalSeason = useMemo(() => getLiturgicalSeason(new Date()), []);
-
-  // Fetch week events
-  const fetchWeekEvents = useCallback(async () => {
-    try {
-      const response = await fetch('/api/calendar/events?filter=week');
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      setWeekEvents(Array.isArray(data.events) ? data.events : []);
-    } catch (error) {
-      console.error('Error fetching week events:', error);
-      setWeekEvents([]);
+  const visibleRange = useMemo(() => {
+    if (viewMode === 'month') {
+      return {
+        start: cursorDate.startOf('month').startOf('week'),
+        end: cursorDate.endOf('month').endOf('week'),
+      };
     }
-  }, []);
+    return {
+      start: cursorDate.startOf('week'),
+      end: cursorDate.endOf('week'),
+    };
+  }, [cursorDate, viewMode]);
 
-  // Fetch month events
-  const fetchMonthEvents = useCallback(async (date: Date) => {
-    try {
-      const response = await fetch(`/api/calendar/events?filter=month&date=${date.toISOString()}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      setMonthEvents(Array.isArray(data.events) ? data.events : []);
-    } catch (error) {
-      console.error('Error fetching month events:', error);
-      setMonthEvents([]);
-    }
-  }, []);
-
-  // Refresh manual
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await (viewMode === 'week' ? fetchWeekEvents() : fetchMonthEvents(selectedMonth));
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // Pull-to-refresh handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0 && e.touches[0]) {
-      touchStartY.current = e.touches[0].clientY;
-      setIsPulling(true);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isPulling || !scrollContainerRef.current || !e.touches[0]) return;
-
-    const touchY = e.touches[0].clientY;
-    const distance = touchY - touchStartY.current;
-
-    if (distance > 0 && scrollContainerRef.current.scrollTop === 0) {
-      const resistance = 2.5;
-      const adjustedDistance = Math.min(distance / resistance, 100);
-      setPullDistance(adjustedDistance);
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (!isPulling) return;
-
-    if (pullDistance > 60) {
-      await handleRefresh();
-    }
-
-    setIsPulling(false);
-    setPullDistance(0);
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
+  const loadEvents = useCallback(
+    async (opts: { forceRefresh?: boolean } = {}) => {
       setLoading(true);
+      setError(null);
+
       try {
-        await (viewMode === 'week' ? fetchWeekEvents() : fetchMonthEvents(selectedMonth));
+        const params = new URLSearchParams({
+          start: visibleRange.start.toDate().toISOString(),
+          end: visibleRange.end.toDate().toISOString(),
+        });
+
+        if (opts.forceRefresh) {
+          params.set('refresh', 'true');
+          params.set('ts', String(Date.now())); // cache-buster (también para SW)
+        }
+
+        const res = await fetch(`/api/calendar/events?${params.toString()}`, {
+          cache: opts.forceRefresh ? 'no-store' : 'default',
+        });
+
+        const data = (await res.json().catch(() => null)) as ApiResponse | null;
+        if (!res.ok) {
+          throw new Error(
+            data?.events
+              ? 'Error al cargar eventos'
+              : (data as any)?.error || 'Error al cargar eventos'
+          );
+        }
+
+        setEvents(Array.isArray(data?.events) ? data!.events : []);
+        setMeta({ cached: Boolean(data?.cached), lastUpdate: data?.lastUpdate });
+      } catch (err) {
+        console.error(err);
+        setEvents([]);
+        setMeta(null);
+        setError('No se pudieron cargar los eventos. Revisa tu conexión e inténtalo de nuevo.');
+        haptics.error();
       } finally {
         setLoading(false);
       }
-    };
-    loadData();
-  }, [viewMode, selectedMonth, fetchWeekEvents, fetchMonthEvents]);
+    },
+    [visibleRange.end, visibleRange.start]
+  );
 
-  // Auto-refresh cada 2 minutos
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (viewMode === 'week') {
-        fetchWeekEvents();
-      } else {
-        fetchMonthEvents(selectedMonth);
-      }
-    }, 120000); // 2 minutos = 120000ms
+    void loadEvents();
+  }, [loadEvents]);
 
-    return () => clearInterval(intervalId);
-  }, [viewMode, selectedMonth, fetchWeekEvents, fetchMonthEvents]);
+  // Group events by date for rendering
+  const eventsByDate = useMemo(() => {
+    const grouped: Record<string, Event[]> = {};
 
-  const formatTime = (dateString: string) => {
-    return dayjs(dateString).format('HH:mm');
-  };
+    for (const event of events) {
+      const dateKey = dayjs(event.start).format('YYYY-MM-DD');
+      (grouped[dateKey] ||= []).push(event);
+    }
 
-  const formatDate = (dateString: string) => {
-    const formatted = dayjs(dateString).format('dddd, D [de] MMMM');
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  };
+    for (const dateKey of Object.keys(grouped)) {
+      const bucket = grouped[dateKey];
+      if (!bucket) continue;
+      bucket.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    }
 
-  const formatShortDate = (date: Date) => {
-    return dayjs(date).format('D MMM');
-  };
+    return grouped;
+  }, [events]);
 
-  const getNext7Days = () => {
-    const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(today);
-      day.setDate(today.getDate() + i);
-      days.push(day);
+  const weekStart = useMemo(() => cursorDate.startOf('week'), [cursorDate]);
+  const weekEnd = useMemo(() => cursorDate.endOf('week'), [cursorDate]);
+
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day')),
+    [weekStart]
+  );
+
+  const monthDays = useMemo(() => {
+    const gridStart = cursorDate.startOf('month').startOf('week');
+    const gridEnd = cursorDate.endOf('month').endOf('week');
+
+    const days: dayjs.Dayjs[] = [];
+    for (
+      let d = gridStart;
+      d.isBefore(gridEnd, 'day') || d.isSame(gridEnd, 'day');
+      d = d.add(1, 'day')
+    ) {
+      days.push(d);
     }
     return days;
-  };
+  }, [cursorDate]);
 
-  const getEventsForDay = (day: Date, events: CalendarEvent[]) => {
-    const dayString = dayjs(day).format('YYYY-MM-DD');
-    return events
-      .filter((event) => dayjs(event.start).format('YYYY-MM-DD') === dayString)
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-  };
-
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const days: (Date | null)[] = [];
-    for (let i = 0; i < (startingDayOfWeek === 0 ? 6 : startingDayOfWeek - 1); i++) {
-      days.push(null);
+  const handleDateSelect = (date: dayjs.Dayjs) => {
+    haptics.light();
+    setSelectedDate(date);
+    if (viewMode === 'month' && !date.isSame(cursorDate, 'month')) {
+      setCursorDate(date);
     }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
+  };
+
+  const handlePrev = () => {
+    haptics.light();
+    if (viewMode === 'week') {
+      setCursorDate((d) => d.subtract(1, 'week'));
+      setSelectedDate((d) => d.subtract(1, 'week'));
+      return;
     }
-    return days;
+
+    setCursorDate((d) => d.subtract(1, 'month'));
+    setSelectedDate((d) => d.subtract(1, 'month'));
   };
 
-  const changeMonth = (direction: 'prev' | 'next') => {
-    const newMonth = new Date(selectedMonth);
-    newMonth.setMonth(newMonth.getMonth() + (direction === 'prev' ? -1 : 1));
-    setSelectedMonth(newMonth);
-  };
-
-  const isToday = (date: Date) => {
-    return dayjs(date).format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
-  };
-
-  const isTomorrow = (date: Date) => {
-    return dayjs(date).format('YYYY-MM-DD') === dayjs().add(1, 'day').format('YYYY-MM-DD');
-  };
-
-  const getEventBadge = (eventDate: Date) => {
-    if (isToday(eventDate)) {
-      return { text: 'HOY', color: '#007AFF', bgColor: '#E5F1FF' };
+  const handleNext = () => {
+    haptics.light();
+    if (viewMode === 'week') {
+      setCursorDate((d) => d.add(1, 'week'));
+      setSelectedDate((d) => d.add(1, 'week'));
+      return;
     }
-    if (isTomorrow(eventDate)) {
-      return { text: 'MAÑANA', color: '#5AC8FA', bgColor: '#E0F5FF' };
-    }
-    return null;
+
+    setCursorDate((d) => d.add(1, 'month'));
+    setSelectedDate((d) => d.add(1, 'month'));
   };
 
-  // Estado para mostrar toast de éxito
-  const [showCopyToast, setShowCopyToast] = useState(false);
+  const handleToday = () => {
+    haptics.light();
+    const today = dayjs();
+    setCursorDate(today);
+    setSelectedDate(today);
+  };
 
-  // Compartir evento
-  const handleShareEvent = async (event: CalendarEvent) => {
-    const eventText = `${event.title}\n${formatDate(event.start)}\n${!event.allDay ? `${formatTime(event.start)} - ${formatTime(event.end)}` : 'Todo el día'}${event.location ? `\nLugar: ${event.location}` : ''}${event.description ? `\n\n${event.description}` : ''}`;
+  const handleRefresh = () => {
+    haptics.medium();
+    void loadEvents({ forceRefresh: true });
+  };
 
-    // Intentar usar la Web Share API si está disponible
+  const handleShareEvent = async (event: Event) => {
+    haptics.medium();
+    const text = [
+      event.title,
+      `${capitalize(dayjs(event.start).format('dddd'))}, ${dayjs(event.start).format('D [de] MMMM')} · ${formatEventTime(event)}`,
+      event.location,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: event.title,
-          text: eventText,
+          text,
+          url: window.location.href,
         });
-        console.log('Evento compartido exitosamente');
-      } catch (error: any) {
-        // Si el usuario cancela, error.name === 'AbortError'
-        if (error.name !== 'AbortError') {
-          console.log('Error al compartir:', error);
-          // Intentar fallback
-          await fallbackCopyToClipboard(eventText);
-        }
+        toast.success('Evento compartido');
+      } catch (err) {
+        console.error('Error sharing', err);
       }
     } else {
-      // Fallback: copiar al portapapeles
-      await fallbackCopyToClipboard(eventText);
-    }
-  };
-
-  // Función auxiliar para copiar al portapapeles
-  const fallbackCopyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      // Mostrar toast de éxito
-      setShowCopyToast(true);
-      setTimeout(() => setShowCopyToast(false), 3000);
-    } catch (error) {
-      console.log('Error al copiar:', error);
-      // Último fallback: crear un textarea temporal
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
       try {
-        document.execCommand('copy');
-        setShowCopyToast(true);
-        setTimeout(() => setShowCopyToast(false), 3000);
-      } catch (err) {
-        console.error('Error en fallback final:', err);
+        await navigator.clipboard.writeText(text);
+        toast.success('Copiado al portapapeles');
+      } catch {
+        toast.info(text);
       }
-      document.body.removeChild(textarea);
     }
   };
 
-  // Descargar evento como archivo .ics
-  const handleDownloadEvent = (event: CalendarEvent) => {
-    const startDate = new Date(event.start);
-    const endDate = new Date(event.end);
-
-    const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//APP PARRO//ES
-BEGIN:VEVENT
-UID:${event.id}@appparro.com
-DTSTAMP:${formatICSDate(new Date())}
-DTSTART:${formatICSDate(startDate)}
-DTEND:${formatICSDate(endDate)}
-SUMMARY:${event.title}
-${event.description ? `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}` : ''}
-${event.location ? `LOCATION:${event.location}` : ''}
-END:VEVENT
-END:VCALENDAR`;
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadICS = (event: Event) => {
+    haptics.success();
+    const ics = buildSingleEventICS(event);
+    const filename = `${safeFilename(event.title)}.ics`;
+    downloadTextFile(filename, ics, 'text/calendar;charset=utf-8');
+    toast.success('Evento descargado (.ics)');
   };
 
-  if (loading) {
+  const openEvent = (event: Event) => {
+    haptics.medium();
+    setActiveEvent(event);
+  };
+
+  const closeEvent = () => {
+    haptics.light();
+    setActiveEvent(null);
+  };
+
+  // --- Render Helpers ---
+
+  const renderWeekView = () => {
     return (
-      <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100">
-        <Loading message="Cargando eventos..." />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header con fecha actual y color litúrgico - iOS 26 Liquid Glass Lite */}
-      <div
-        className="relative px-6 pt-5 pb-4 overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}15 0%, ${liturgicalSeason.gradient[1]}25 100%)`,
-        }}
-      >
-        {/* Efecto Liquid Glass sutil en el fondo */}
-        <div
-          className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl"
-          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-        />
-
-        <div className="relative z-10">
-          {/* Día de la semana */}
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
-              {dayjs().format('dddd')}
-            </p>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all"
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <RefreshCw
-                className={`w-4 h-4 text-slate-700 dark:text-slate-300 ${refreshing ? 'animate-spin' : ''}`}
-              />
-            </button>
-          </div>
-
-          {/* Día y mes - Tipografía grande iOS */}
-          <h1 className="text-[34px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight mb-2">
-            {dayjs().format('D [de] MMMM')}
-          </h1>
-
-          {/* Badge del tiempo litúrgico */}
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 dark:bg-slate-800/70 backdrop-blur-md shadow-sm"
-            style={{ backdropFilter: 'blur(10px) saturate(180%)' }}
-          >
-            <div
-              className="w-2 h-2 rounded-full shadow-sm"
-              style={{ backgroundColor: liturgicalSeason.gradient[0] }}
-            />
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 tracking-wide">
-              {liturgicalSeason.name}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs flotantes - Liquid Glass Lite iOS 26 */}
-      <div className="px-6 pt-2 pb-4">
-        <div
-          className="flex gap-1 p-1 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg border border-white/20 dark:border-slate-700/30"
-          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-        >
+      <div className="space-y-6">
+        {/* Date Strip (Week) */}
+        <div className="flex justify-between items-center bg-card-background rounded-2xl p-2 shadow-sm border border-card-border">
           <button
-            onClick={() => setViewMode('week')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 ease-out min-h-[44px] ${
-              viewMode === 'week'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md scale-[0.98]'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-white/40 dark:hover:bg-slate-700/40'
-            }`}
-            style={viewMode === 'week' ? { backdropFilter: 'blur(10px)' } : {}}
+            onClick={handlePrev}
+            className="p-2 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
+            aria-label="Semana anterior"
           >
-            <List className="w-[18px] h-[18px]" strokeWidth={2.5} />
-            <span className="tracking-tight">Semanal</span>
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => setViewMode('month')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 ease-out min-h-[44px] ${
-              viewMode === 'month'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md scale-[0.98]'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-white/40 dark:hover:bg-slate-700/40'
-            }`}
-            style={viewMode === 'month' ? { backdropFilter: 'blur(10px)' } : {}}
-          >
-            <CalendarIcon className="w-[18px] h-[18px]" strokeWidth={2.5} />
-            <span className="tracking-tight">Mensual</span>
-          </button>
-        </div>
-      </div>
 
-      {/* Contenido */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-6 pb-28 relative"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          transform: isPulling ? `translateY(${pullDistance}px)` : 'none',
-          transition: isPulling ? 'none' : 'transform 0.3s ease-out',
-        }}
-      >
-        {/* Pull to refresh indicator - iOS 26 Liquid Glass */}
-        {isPulling && (
-          <div
-            className="absolute top-0 left-0 right-0 flex items-center justify-center z-50"
-            style={{
-              transform: `translateY(-${Math.max(0, 50 - pullDistance)}px)`,
-              opacity: Math.min(pullDistance / 60, 1),
-            }}
-          >
-            <div
-              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-full p-4 shadow-2xl border border-white/30 dark:border-slate-700/30"
-              style={{ backdropFilter: 'blur(30px) saturate(180%)' }}
-            >
-              <RefreshCw
-                className={`w-6 h-6 text-blue-600 dark:text-blue-400 ${pullDistance > 60 ? 'animate-spin' : ''}`}
-                style={{
-                  transform: pullDistance > 60 ? 'none' : `rotate(${pullDistance * 4}deg)`,
-                  transition: pullDistance > 60 ? 'none' : 'transform 0.1s ease-out',
-                }}
-                strokeWidth={2.5}
-              />
-            </div>
-          </div>
-        )}
-        {viewMode === 'week' ? (
-          // Vista Semanal - iOS 26 Liquid Glass Lite
-          <div className="space-y-7">
-            {weekEvents.length === 0 ? (
-              <div
-                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-[28px] p-12 text-center shadow-lg border border-white/20 dark:border-slate-700/30"
-                style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-              >
-                <div className="w-[88px] h-[88px] bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
-                  <CalendarIcon
-                    className="w-11 h-11 text-slate-400 dark:text-slate-500"
-                    strokeWidth={2}
+          <div className="flex gap-1 overflow-x-auto no-scrollbar flex-1 justify-center">
+            {weekDays.map((day) => {
+              const isSelected = day.isSame(selectedDate, 'day');
+              const isToday = day.isSame(dayjs(), 'day');
+              const dateKey = day.format('YYYY-MM-DD');
+              const count = eventsByDate[dateKey]?.length ?? 0;
+              const dotClass =
+                count > 0
+                  ? CATEGORY_META[detectCategory(eventsByDate[dateKey]?.[0]?.title || '')].dot
+                  : '';
+
+              return (
+                <button
+                  key={day.toString()}
+                  onClick={() => handleDateSelect(day)}
+                  className={cn(
+                    'flex flex-col items-center justify-center min-w-[46px] h-[64px] rounded-2xl transition-all',
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800',
+                    isToday &&
+                      !isSelected &&
+                      'text-blue-600 font-bold bg-blue-50 dark:bg-blue-900/20'
+                  )}
+                >
+                  <span className="text-[10px] uppercase font-semibold tracking-wide mb-0.5">
+                    {day.format('ddd')}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-lg font-bold leading-none',
+                      isSelected ? 'text-white' : 'text-slate-900 dark:text-white'
+                    )}
+                  >
+                    {day.format('D')}
+                  </span>
+                  <span
+                    className={cn(
+                      'mt-1 h-1.5 w-1.5 rounded-full transition-opacity',
+                      isSelected ? 'bg-white/90' : count > 0 ? dotClass : 'bg-transparent'
+                    )}
+                    aria-hidden="true"
                   />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2.5 tracking-tight">
-                  No hay eventos
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-[15px]">
-                  No tienes eventos programados
-                  <br />
-                  para los próximos 7 días
-                </p>
-              </div>
-            ) : (
-              getNext7Days().map((day) => {
-                const events = getEventsForDay(day, weekEvents);
-                if (events.length === 0) return null;
+                </button>
+              );
+            })}
+          </div>
 
-                const dayLabel = isToday(day)
-                  ? 'Hoy'
-                  : isTomorrow(day)
-                    ? 'Mañana'
-                    : formatShortDate(day);
+          <button
+            onClick={handleNext}
+            className="p-2 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
+            aria-label="Semana siguiente"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
 
-                return (
-                  <div key={day.toISOString()} className="mb-7">
-                    {/* Separador de día - SF Typography */}
-                    <div className="flex items-center gap-2.5 mb-4 px-1">
-                      <h2 className="text-[22px] font-bold text-slate-900 dark:text-white tracking-tight">
-                        {dayLabel}
-                      </h2>
-                      <div className="px-2.5 py-1 bg-gradient-to-r from-blue-500/10 to-blue-600/15 dark:from-blue-400/10 dark:to-blue-500/15 rounded-xl backdrop-blur-sm">
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 tracking-wide">
-                          {events.length} {events.length === 1 ? 'evento' : 'eventos'}
-                        </span>
-                      </div>
-                    </div>
+        {/* Agenda semanal */}
+        {!loading && !error && events.length === 0 ? (
+          <EmptyCalendar onRefresh={handleRefresh} />
+        ) : (
+          <div className="space-y-6 pb-20">
+            {weekDays.map((day) => {
+              const dateKey = day.format('YYYY-MM-DD');
+              const dayEvents = eventsByDate[dateKey] || [];
+              const isSelected = day.isSame(selectedDate, 'day');
 
-                    {/* Timeline de eventos con diseño mejorado 2025 */}
-                    <div className="relative pl-4">
-                      {/* Línea vertical del timeline con gradiente */}
-                      <div className="absolute left-0 top-2 bottom-4 w-0.5 bg-gradient-to-b from-slate-200 via-slate-300 to-transparent dark:from-slate-700 dark:via-slate-600 rounded-full" />
+              if (dayEvents.length === 0 && !isSelected) return null;
 
-                      <div className="space-y-5">
-                        {events.map((event, index) => {
-                          const colors = getEventColor(event.title);
-                          const badge = getEventBadge(new Date(event.start));
+              return (
+                <section key={dateKey} className="space-y-3">
+                  <div className="flex items-baseline justify-between px-1">
+                    <h3 className="text-base font-extrabold text-foreground tracking-tight">
+                      {day.isSame(dayjs(), 'day') ? 'Hoy' : capitalize(day.format('dddd'))}
+                      <span className="ml-2 text-sm font-semibold text-slate-500">
+                        {day.format('D [de] MMMM')}
+                      </span>
+                    </h3>
+                    {dayEvents.length > 0 && (
+                      <span className="text-xs font-semibold text-slate-500">
+                        {dayEvents.length} {dayEvents.length === 1 ? 'evento' : 'eventos'}
+                      </span>
+                    )}
+                  </div>
 
-                          return (
+                  {dayEvents.length === 0 ? (
+                    <Card
+                      variant="flat"
+                      className="py-6 flex items-center justify-center text-center text-slate-400"
+                    >
+                      <p className="text-sm font-medium">Sin eventos</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {dayEvents.map((event, idx) => {
+                        const category = detectCategory(event.title || '');
+                        const meta = CATEGORY_META[category];
+
+                        return (
+                          <Card
+                            key={event.id}
+                            variant="flat"
+                            padding="none"
+                            className="overflow-hidden stagger-item"
+                            style={{ animationDelay: `${0.05 + idx * 0.05}s` }}
+                          >
                             <button
-                              key={event.id}
-                              onClick={() => setSelectedEvent(event)}
-                              className="w-full text-left group relative"
+                              onClick={() => openEvent(event)}
+                              className="w-full text-left p-4 relative active:scale-[0.99] transition-transform touch-feedback"
                             >
-                              {/* Connector dot */}
                               <div
-                                className="absolute -left-[21px] top-6 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800 shadow-sm z-10 transition-transform group-hover:scale-125"
-                                style={{ backgroundColor: colors.primary }}
+                                className={cn(
+                                  'absolute left-0 top-3 bottom-3 w-1 rounded-full',
+                                  meta.accent
+                                )}
                               />
-
-                              <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-700/50 group-hover:-translate-y-0.5">
-                                {/* Fondo con gradiente muy sutil */}
-                                <div
-                                  className="absolute inset-0 opacity-[0.03]"
-                                  style={{ backgroundColor: colors.primary }}
-                                />
-
-                                <div className="p-4 sm:p-5 flex gap-4">
-                                  {/* Columna de hora */}
-                                  <div className="flex flex-col items-center justify-start pt-1 min-w-[3.5rem] border-r border-slate-100 dark:border-slate-700/50 pr-4">
-                                    {!event.allDay ? (
-                                      <>
-                                        <span className="text-sm font-bold text-slate-900 dark:text-white leading-none">
-                                          {formatTime(event.start)}
-                                        </span>
-                                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-1 leading-none">
-                                          {formatTime(event.end)}
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <div className="flex flex-col items-center">
-                                        <span className="text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
-                                          Todo
-                                        </span>
-                                        <span className="text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
-                                          el día
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Contenido principal */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                                      <h3 className="text-[16px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight truncate pr-1">
-                                        {event.title}
-                                      </h3>
-                                      {badge && (
-                                        <span
-                                          className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wide uppercase shadow-sm"
-                                          style={{
-                                            backgroundColor: badge.bgColor,
-                                            color: badge.color,
-                                          }}
-                                        >
-                                          {badge.text}
-                                        </span>
-                                      )}
-                                    </div>
-
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <p className="text-base font-bold text-foreground leading-snug">
+                                    {event.title}
+                                  </p>
+                                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+                                    <span className="inline-flex items-center gap-1.5 font-semibold">
+                                      <Clock className="w-3.5 h-3.5" />
+                                      {formatEventTime(event)}
+                                    </span>
                                     {event.location && (
-                                      <div className="flex items-center gap-1.5 mb-2 text-slate-500 dark:text-slate-400">
-                                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                        <span className="text-xs font-medium truncate">
+                                      <span className="inline-flex items-center gap-1.5 min-w-0">
+                                        <MapPin className="w-3.5 h-3.5" />
+                                        <span className="truncate max-w-[220px]">
                                           {event.location}
                                         </span>
-                                      </div>
+                                      </span>
                                     )}
-
-                                    {event.description && (
-                                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                                        {event.description}
-                                      </p>
-                                    )}
+                                    <span
+                                      className={cn(
+                                        'inline-flex items-center px-2 py-0.5 rounded-full font-semibold',
+                                        meta.pill
+                                      )}
+                                    >
+                                      {meta.label}
+                                    </span>
                                   </div>
                                 </div>
-
-                                {/* Bottom Accent Line */}
-                                <div
-                                  className="absolute bottom-0 left-0 right-0 h-[2px] opacity-80"
-                                  style={{
-                                    background: `linear-gradient(90deg, ${colors.primary}, transparent)`,
-                                  }}
-                                />
+                                <ChevronRight className="w-5 h-5 text-slate-300 mt-1 shrink-0" />
                               </div>
                             </button>
-                          );
-                        })}
-                      </div>
+                          </Card>
+                        );
+                      })}
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        ) : (
-          // Vista Mensual - iOS 26 Liquid Glass Lite
-          <div
-            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30"
-            style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-          >
-            {/* Selector de mes - Controles táctiles 44x44pt */}
-            <div className="flex items-center justify-between mb-7">
-              <button
-                onClick={() => changeMonth('prev')}
-                className="w-11 h-11 rounded-full bg-white/60 dark:bg-slate-700/60 backdrop-blur-md hover:bg-white/90 dark:hover:bg-slate-700/90 flex items-center justify-center transition-all shadow-sm"
-                style={{ backdropFilter: 'blur(10px)' }}
-              >
-                <ChevronLeft
-                  className="w-[22px] h-[22px] text-blue-600 dark:text-blue-400"
-                  strokeWidth={2.5}
-                />
-              </button>
-
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {dayjs(selectedMonth)
-                  .format('MMMM YYYY')
-                  .replace(/^\w/, (c) => c.toUpperCase())}
-              </h2>
-
-              <button
-                onClick={() => changeMonth('next')}
-                className="w-11 h-11 rounded-full bg-white/60 dark:bg-slate-700/60 backdrop-blur-md hover:bg-white/90 dark:hover:bg-slate-700/90 flex items-center justify-center transition-all shadow-sm"
-                style={{ backdropFilter: 'blur(10px)' }}
-              >
-                <ChevronRight
-                  className="w-[22px] h-[22px] text-blue-600 dark:text-blue-400"
-                  strokeWidth={2.5}
-                />
-              </button>
-            </div>
-
-            {/* Días de la semana - SF Typography */}
-            <div className="grid grid-cols-7 gap-2 mb-4">
-              {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, i) => (
-                <div
-                  key={i}
-                  className="text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Grid del calendario */}
-            <div className="grid grid-cols-7 gap-2 mb-6">
-              {getDaysInMonth(selectedMonth).map((day, index) => {
-                const eventsForDay = day ? getEventsForDay(day, monthEvents) : [];
-                const hasEvents = eventsForDay.length > 0;
-                const dayIsToday = day && isToday(day);
-                const dayIsSelected =
-                  day && selectedDay && day.toDateString() === selectedDay.toDateString();
-                const eventColors = eventsForDay
-                  .slice(0, 3)
-                  .map((e) => getEventColor(e.title).primary);
-
-                return (
-                  <button
-                    key={index}
-                    disabled={!day}
-                    onClick={() => {
-                      if (day) {
-                        setSelectedDay(day);
-                        // Scroll automático a la lista de eventos
-                        setTimeout(() => {
-                          eventsListRef.current?.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'nearest',
-                          });
-                        }, 100);
-                      }
-                    }}
-                    className="aspect-square relative group"
-                  >
-                    {day && (
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        <div
-                          className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-semibold transition-all ${
-                            dayIsToday
-                              ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg shadow-blue-500/40'
-                              : dayIsSelected
-                                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-2 ring-blue-600 dark:ring-blue-400'
-                                : hasEvents
-                                  ? 'bg-slate-100 dark:bg-slate-700/60 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
-                                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                          }`}
-                        >
-                          {day.getDate()}
-                        </div>
-                        {hasEvents && !dayIsToday && (
-                          <div className="flex gap-1 mt-1.5">
-                            {eventColors.map((color, i) => (
-                              <div
-                                key={i}
-                                className="w-1 h-1 rounded-full shadow-sm"
-                                style={{
-                                  backgroundColor: color,
-                                  boxShadow: `0 0 4px ${color}40`,
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Lista de eventos del día seleccionado con diseño 2025 */}
-            <div
-              ref={eventsListRef}
-              className="pt-5 border-t border-slate-200/60 dark:border-slate-700/40"
-            >
-              <h3 className="text-[14px] font-bold text-slate-500 dark:text-slate-400 mb-4 tracking-wide uppercase flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4" />
-                {selectedDay
-                  ? `${dayjs(selectedDay).format('dddd D [de] MMMM')}`
-                  : 'Selecciona un día'}
-              </h3>
-
-              {!selectedDay ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                  <p className="text-sm text-slate-500">Toca un día para ver detalles</p>
-                </div>
-              ) : getEventsForDay(selectedDay, monthEvents).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2">
-                    <Clock className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Sin eventos
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {getEventsForDay(selectedDay, monthEvents).map((event) => {
-                    const colors = getEventColor(event.title);
-                    return (
-                      <button
-                        key={event.id}
-                        onClick={() => setSelectedEvent(event)}
-                        className="w-full text-left bg-white dark:bg-slate-700/40 hover:bg-slate-50 dark:hover:bg-slate-700/60 p-4 rounded-xl border border-slate-100 dark:border-slate-600 transition-all group shadow-sm hover:shadow-md"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br ${colors.gradient} text-white shrink-0`}
-                          >
-                            <span className="text-xs font-bold leading-none">
-                              {event.allDay ? 'TD' : formatTime(event.start).replace(':', '')}
-                            </span>
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-slate-900 dark:text-white text-[15px] truncate leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                              {event.title}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              {!event.allDay && (
-                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                  {formatTime(event.start)} - {formatTime(event.end)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-400 transition-colors" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
+    );
+  };
 
-      {/* Modal de detalles del evento - iOS 26 Sheet Presentation Style */}
-      {selectedEvent && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50 animate-fade-in"
-          onClick={() => setSelectedEvent(null)}
-        >
-          <div
-            className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-2xl rounded-t-[40px] w-full max-w-2xl p-7 pb-10 shadow-2xl border-t border-white/20 dark:border-slate-700/30 animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-            style={{ backdropFilter: 'blur(40px) saturate(180%)' }}
-          >
-            {/* Handle bar - iOS 26 style */}
-            <div className="w-9 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-6 shadow-sm" />
+  const renderMonthView = () => {
+    const weekLabels = Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day').format('dd'));
 
-            {/* Header con tipografía iOS */}
-            <div className="flex items-start justify-between mb-7">
-              <h2 className="text-[28px] font-bold text-slate-900 dark:text-white pr-4 leading-tight tracking-tight">
-                {selectedEvent.title}
-              </h2>
-              <button
-                onClick={() => setSelectedEvent(null)}
-                className="w-11 h-11 rounded-full bg-slate-100/80 dark:bg-slate-700/80 backdrop-blur-md hover:bg-slate-200 dark:hover:bg-slate-600 flex items-center justify-center flex-shrink-0 transition-all shadow-sm"
-                style={{ backdropFilter: 'blur(10px)' }}
-              >
-                <X className="w-5 h-5 text-slate-600 dark:text-slate-300" strokeWidth={2.5} />
-              </button>
-            </div>
-
-            {/* Contenido con Liquid Glass cards */}
-            <div className="space-y-4 mb-6">
+    return (
+      <div className="space-y-6 pb-20">
+        <Card variant="flat" padding="sm" className="overflow-hidden">
+          <div className="grid grid-cols-7 gap-1.5 px-1 pb-2">
+            {weekLabels.map((label) => (
               <div
-                className="flex gap-4 items-start bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-[18px] rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm"
-                style={{ backdropFilter: 'blur(20px)' }}
+                key={label}
+                className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center"
               >
-                <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                  <Clock className="w-[22px] h-[22px] text-white" strokeWidth={2.5} />
-                </div>
-                <div className="flex-1 pt-0.5">
-                  <p className="font-semibold text-[17px] text-slate-900 dark:text-white mb-1.5 tracking-tight leading-snug">
-                    {formatDate(selectedEvent.start)}
-                  </p>
-                  {!selectedEvent.allDay ? (
-                    <p className="text-[15px] text-slate-600 dark:text-slate-400 tracking-tight">
-                      {formatTime(selectedEvent.start)} - {formatTime(selectedEvent.end)}
-                    </p>
-                  ) : (
-                    <p className="text-[15px] text-slate-600 dark:text-slate-400 tracking-tight">
-                      Todo el día
-                    </p>
-                  )}
-                </div>
+                {label}
               </div>
+            ))}
+          </div>
 
-              {selectedEvent.location && (
-                <div
-                  className="flex gap-4 items-start bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-[18px] rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm"
-                  style={{ backdropFilter: 'blur(20px)' }}
+          <div className="grid grid-cols-7 gap-1.5">
+            {monthDays.map((day) => {
+              const isInMonth = day.isSame(cursorDate, 'month');
+              const isSelected = day.isSame(selectedDate, 'day');
+              const isToday = day.isSame(dayjs(), 'day');
+              const dateKey = day.format('YYYY-MM-DD');
+              const count = eventsByDate[dateKey]?.length ?? 0;
+
+              return (
+                <button
+                  key={dateKey}
+                  onClick={() => handleDateSelect(day)}
+                  className={cn(
+                    'h-11 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95',
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/60',
+                    !isInMonth && !isSelected && 'text-slate-300 dark:text-slate-600',
+                    isToday &&
+                      !isSelected &&
+                      'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/20'
+                  )}
+                  aria-label={day.format('D [de] MMMM YYYY')}
                 >
-                  <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                    <MapPin className="w-[22px] h-[22px] text-white" strokeWidth={2.5} />
-                  </div>
-                  <p className="flex-1 text-[16px] text-slate-900 dark:text-white font-medium self-center tracking-tight leading-relaxed">
-                    {selectedEvent.location}
-                  </p>
-                </div>
-              )}
+                  <span className={cn('text-sm font-extrabold', isSelected ? 'text-white' : '')}>
+                    {day.format('D')}
+                  </span>
+                  <span
+                    className={cn(
+                      'mt-1 h-1.5 w-1.5 rounded-full transition-opacity',
+                      isSelected ? 'bg-white/90' : count > 0 ? 'bg-blue-500' : 'bg-transparent',
+                      !isInMonth && count > 0 && !isSelected && 'bg-slate-300 dark:bg-slate-600'
+                    )}
+                    aria-hidden="true"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </Card>
 
-              {selectedEvent.description && (
-                <div
-                  className="bg-white/60 dark:bg-slate-700/60 backdrop-blur-xl p-5 rounded-2xl border border-white/20 dark:border-slate-600/30 shadow-sm"
-                  style={{ backdropFilter: 'blur(20px)' }}
+        {/* Eventos del día seleccionado */}
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between px-1">
+            <h3 className="text-base font-extrabold text-foreground tracking-tight">
+              {selectedDate.isSame(dayjs(), 'day')
+                ? 'Hoy'
+                : capitalize(selectedDate.format('dddd'))}
+              <span className="ml-2 text-sm font-semibold text-slate-500">
+                {selectedDate.format('D [de] MMMM')}
+              </span>
+            </h3>
+            {(eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0) > 0 && (
+              <span className="text-xs font-semibold text-slate-500">
+                {eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0}{' '}
+                {(eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0) === 1
+                  ? 'evento'
+                  : 'eventos'}
+              </span>
+            )}
+          </div>
+
+          {(() => {
+            const dateKey = selectedDate.format('YYYY-MM-DD');
+            const dailyEvents = eventsByDate[dateKey] || [];
+
+            if (dailyEvents.length === 0) {
+              return (
+                <Card
+                  variant="flat"
+                  className="py-8 flex flex-col items-center text-center text-slate-400"
                 >
-                  <p className="text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight">
-                    {selectedEvent.description}
-                  </p>
-                </div>
-              )}
-            </div>
+                  <Grid3X3 className="w-10 h-10 mb-2 opacity-20" />
+                  <p className="font-medium">No hay eventos ese día</p>
+                </Card>
+              );
+            }
 
-            {/* Botones de acción - Grid mejorado */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <button
-                onClick={() => {
-                  handleShareEvent(selectedEvent);
-                }}
-                className="flex items-center justify-center gap-2.5 px-4 py-4 bg-gradient-to-br from-blue-50 to-blue-100/80 dark:from-blue-900/30 dark:to-blue-800/30 hover:from-blue-100 hover:to-blue-200/80 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 text-blue-600 dark:text-blue-400 font-semibold rounded-2xl transition-all shadow-sm backdrop-blur-sm min-h-[56px]"
-                style={{ backdropFilter: 'blur(10px)' }}
-              >
-                <Share2 className="w-5 h-5" strokeWidth={2.5} />
-                <span className="tracking-tight">Compartir</span>
-              </button>
-              <button
-                onClick={() => {
-                  handleDownloadEvent(selectedEvent);
-                }}
-                className="flex items-center justify-center gap-2.5 px-4 py-4 bg-gradient-to-br from-green-50 to-green-100/80 dark:from-green-900/30 dark:to-green-800/30 hover:from-green-100 hover:to-green-200/80 dark:hover:from-green-900/40 dark:hover:to-green-800/40 text-green-600 dark:text-green-400 font-semibold rounded-2xl transition-all shadow-sm backdrop-blur-sm min-h-[56px]"
-                style={{ backdropFilter: 'blur(10px)' }}
-              >
-                <Download className="w-5 h-5" strokeWidth={2.5} />
-                <span className="tracking-tight">Descargar</span>
-              </button>
-            </div>
+            return (
+              <div className="space-y-3">
+                {dailyEvents.map((event) => {
+                  const category = detectCategory(event.title || '');
+                  const meta = CATEGORY_META[category];
 
-            {/* Botón de cierre principal - iOS 26 style */}
+                  return (
+                    <Card key={event.id} variant="flat" padding="none" className="overflow-hidden">
+                      <button
+                        onClick={() => openEvent(event)}
+                        className="w-full text-left p-4 relative active:scale-[0.99] transition-transform"
+                      >
+                        <div
+                          className={cn(
+                            'absolute left-0 top-3 bottom-3 w-1 rounded-full',
+                            meta.accent
+                          )}
+                        />
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-base font-bold text-foreground leading-snug">
+                              {event.title}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+                              <span className="inline-flex items-center gap-1.5 font-semibold">
+                                <Clock className="w-3.5 h-3.5" />
+                                {formatEventTime(event)}
+                              </span>
+                              {event.location && (
+                                <span className="inline-flex items-center gap-1.5 min-w-0">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  <span className="truncate max-w-[220px]">{event.location}</span>
+                                </span>
+                              )}
+                              <span
+                                className={cn(
+                                  'inline-flex items-center px-2 py-0.5 rounded-full font-semibold',
+                                  meta.pill
+                                )}
+                              >
+                                {meta.label}
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-slate-300 mt-1 shrink-0" />
+                        </div>
+                      </button>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
+      {/* Premium Header */}
+      <div
+        className="px-6 pt-12 pb-4 flex flex-col sticky top-0 z-10"
+        style={{
+          background: 'var(--glass-background)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid var(--glass-border)',
+        }}
+      >
+        <div className="flex justify-between items-end gap-4">
+          <div className="min-w-0">
+            <h1 className="text-4xl font-black text-foreground tracking-tight">Calendario</h1>
+            <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              {viewMode === 'month'
+                ? capitalize(cursorDate.format('MMMM YYYY'))
+                : `${weekStart.format('D MMM')} – ${weekEnd.format('D MMM YYYY')}`}
+            </p>
+            {meta?.lastUpdate && (
+              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                {meta.cached ? 'En caché' : 'Actualizado'} ·{' '}
+                {dayjs(meta.lastUpdate).format('DD MMM HH:mm')}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedEvent(null)}
-              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-[18px] rounded-2xl transition-all shadow-lg shadow-blue-500/20 min-h-[56px]"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95 disabled:opacity-50"
+              aria-label="Actualizar"
             >
-              <span className="text-[17px] tracking-tight">Cerrar</span>
+              <RefreshCw className={cn('w-5 h-5', loading && 'animate-spin')} />
+            </button>
+            <button
+              onClick={handleToday}
+              className="px-4 py-2 rounded-2xl text-xs font-bold bg-[var(--surface-primary)] text-[var(--tab-active-text)] hover:bg-[var(--surface-primary-strong)] transition-all active:scale-95"
+            >
+              Hoy
             </button>
           </div>
         </div>
-      )}
 
-      {/* Toast de copiado exitoso */}
-      {showCopyToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
-          <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
-            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-              <svg
-                className="w-3 h-3 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        {/* View Toggle - Segmented Control */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handlePrev}
+              className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95"
+              aria-label={viewMode === 'week' ? 'Semana anterior' : 'Mes anterior'}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95"
+              aria-label={viewMode === 'week' ? 'Semana siguiente' : 'Mes siguiente'}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
+            <button
+              onClick={() => {
+                setViewMode('week');
+                haptics.light();
+              }}
+              className={cn(
+                'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                viewMode === 'week'
+                  ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              )}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('month');
+                haptics.light();
+              }}
+              className={cn(
+                'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                viewMode === 'month'
+                  ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              )}
+            >
+              Mes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-4 pb-32">
+        {error ? (
+          <ErrorState onRetry={handleRefresh} />
+        ) : loading ? (
+          <div className="flex justify-center py-14">
+            <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+          </div>
+        ) : viewMode === 'week' ? (
+          renderWeekView()
+        ) : (
+          renderMonthView()
+        )}
+      </div>
+
+      {/* Event Details Sheet */}
+      {activeEvent && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <button
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={closeEvent}
+            aria-label="Cerrar detalles"
+          />
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative w-full max-w-lg bg-white dark:bg-slate-950 rounded-t-[32px] shadow-2xl border-t border-white/10 dark:border-slate-800/50 px-6 pt-4 pb-6 pb-safe animate-slide-up"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
+              <span className="sr-only">Detalles del evento</span>
+              <button
+                onClick={closeEvent}
+                className="ml-auto p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors active:scale-95"
+                aria-label="Cerrar"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <span className="font-semibold text-sm">Evento copiado al portapapeles</span>
+
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-foreground leading-snug">
+                  {activeEvent.title}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500 font-semibold">
+                  {capitalize(dayjs(activeEvent.start).format('dddd'))},{' '}
+                  {dayjs(activeEvent.start).format('D [de] MMMM')} · {formatEventTime(activeEvent)}
+                </p>
+              </div>
+
+              {(activeEvent.location || activeEvent.description) && (
+                <Card variant="flat" className="space-y-3">
+                  {activeEvent.location && (
+                    <div className="flex items-start gap-3 text-sm">
+                      <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
+                      <p className="text-slate-700 dark:text-slate-200">{activeEvent.location}</p>
+                    </div>
+                  )}
+                  {activeEvent.description && (
+                    <div className="flex items-start gap-3 text-sm">
+                      <Clock className="w-4 h-4 text-slate-400 mt-0.5" />
+                      <p className="text-slate-700 dark:text-slate-200 whitespace-pre-line">
+                        {activeEvent.description}
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => void handleShareEvent(activeEvent)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 font-bold text-sm hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Compartir
+                </button>
+                <button
+                  onClick={() => downloadICS(activeEvent)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors active:scale-95"
+                >
+                  <Download className="w-4 h-4" />
+                  Añadir
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+// Default export is needed for dynamic imports in page.tsx
+export default CalendarComponent;

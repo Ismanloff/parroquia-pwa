@@ -1,12 +1,22 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { CalendarDays, Sparkles, BookOpen, RefreshCw, AlertCircle } from 'lucide-react';
+import {
+  Sparkles,
+  BookOpen,
+  RefreshCw,
+  AlertCircle,
+  Calendar as CalendarIcon,
+  ChevronRight,
+  Clock,
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
-import { SkeletonHome } from '@/components/ui/SkeletonLoader';
 import { haptics } from '@/lib/haptics';
+import { Card } from '@/components/ui/Card';
+import { useNavigationStore } from '@/lib/store/navigationStore';
+import { Modal } from '@/components/ui/Modal';
 
 dayjs.locale('es');
 
@@ -22,12 +32,22 @@ type Gospel = {
   reflexion?: string | null;
 };
 
+type UpcomingEvent = {
+  id: string;
+  title: string;
+  start: string;
+  location?: string;
+};
+
 export function Home() {
   const [santo, setSanto] = useState<Saint | null>(null);
   const [evangelio, setEvangelio] = useState<Gospel | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [gospelExpanded, setGospelExpanded] = useState(false);
+
+  const [showSaintModal, setShowSaintModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Pull-to-refresh states
@@ -36,15 +56,21 @@ export function Home() {
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Obtener el color litúrgico del día
+  const { setActiveTab } = useNavigationStore();
+
+  // Liturgical color for subtle accents
   const liturgicalSeason = useMemo(() => getLiturgicalSeason(new Date()), []);
+  const liturgicalColor = liturgicalSeason.gradient[0];
 
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const [saintsRes, gospelRes] = await Promise.all([
-        fetch('/api/saints/today'),
+      const [saintsRes, gospelRes, eventsRes] = await Promise.all([
+        fetch(`/api/saints/today?t=${new Date().getTime()}`),
         fetch('/api/gospel/today'),
+        fetch(
+          `/api/calendar/events?start=${new Date().toISOString()}&end=${dayjs().add(3, 'day').toISOString()}`
+        ),
       ]);
 
       if (saintsRes.ok) {
@@ -56,9 +82,14 @@ export function Home() {
         const data = await gospelRes.json();
         setEvangelio(data.gospel);
       }
+
+      if (eventsRes.ok) {
+        const data = await eventsRes.json();
+        setUpcomingEvents(Array.isArray(data.events) ? data.events.slice(0, 3) : []);
+      }
     } catch (error) {
       console.error('Error fetching daily content:', error);
-      setError('Error al cargar el contenido. Por favor intenta de nuevo.');
+      setError('No se pudo cargar el contenido. Verifica tu conexión.');
     }
   }, []);
 
@@ -68,12 +99,12 @@ export function Home() {
       await fetchData();
       setLoading(false);
     };
-
     loadData();
   }, [fetchData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    haptics.light();
     await fetchData();
     setRefreshing(false);
   };
@@ -88,130 +119,57 @@ export function Home() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isPulling || !scrollContainerRef.current || !e.touches[0]) return;
-
-    const touchY = e.touches[0].clientY;
-    const distance = touchY - touchStartY.current;
-
+    const distance = e.touches[0].clientY - touchStartY.current;
     if (distance > 0 && scrollContainerRef.current.scrollTop === 0) {
-      // Efecto de resistencia: el pull se hace más difícil cuanto más se tira
-      const resistance = 2.5;
-      const adjustedDistance = Math.min(distance / resistance, 100);
-      setPullDistance(adjustedDistance);
+      setPullDistance(Math.min(distance / 2.5, 100));
     }
   };
 
   const handleTouchEnd = async () => {
     if (!isPulling) return;
-
     if (pullDistance > 60) {
-      // Trigger refresh with haptic feedback
       haptics.success();
       setRefreshing(true);
       await fetchData();
       setRefreshing(false);
     }
-
     setIsPulling(false);
     setPullDistance(0);
   };
 
+  const goToCalendar = () => {
+    haptics.light();
+    setActiveTab('calendar');
+  };
+
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-        {/* Header placeholder */}
-        <div
-          className="relative px-6 pt-5 pb-4 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #3B82F615 0%, #6366F125 100%)' }}
-        >
-          <div
-            className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl"
-            style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-          />
-          <div className="relative z-10">
-            <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded-xl mb-2 animate-pulse" />
-            <div className="h-10 w-48 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+      <div className="flex flex-col h-full bg-background">
+        <div className="pt-14 px-5 pb-6">
+          {/* Skeleton Hero */}
+          <div className="h-32 w-full shimmer rounded-3xl mb-5" />
+          {/* Skeleton Bento Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-44 shimmer rounded-2xl" />
+            <div className="h-44 shimmer rounded-2xl" />
+            <div className="col-span-2 h-48 shimmer rounded-2xl" />
           </div>
-        </div>
-        {/* Content skeleton */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 pb-28">
-          <SkeletonHome />
         </div>
       </div>
     );
   }
 
-  const today = dayjs().format('D [de] MMMM, YYYY');
-  const weekday = dayjs().format('dddd');
+  const today = dayjs();
+  const dateStr = today.format('D');
+  const monthStr = today.format('MMMM');
+  const weekday = today.format('dddd');
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 overflow-hidden">
-      {/* Header con fecha y colores litúrgicos - iOS 26 Liquid Glass Lite */}
-      <div
-        className="relative px-6 pt-5 pb-4 overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}15 0%, ${liturgicalSeason.gradient[1]}25 100%)`,
-        }}
-      >
-        {/* Efecto Liquid Glass sutil en el fondo */}
-        <div
-          className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl"
-          style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-        />
-
-        <div className="relative z-10">
-          {/* Día de la semana */}
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <CalendarDays
-                className="w-5 h-5 text-slate-600 dark:text-slate-400"
-                strokeWidth={2.5}
-              />
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
-                {weekday}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                haptics.light();
-                handleRefresh();
-              }}
-              disabled={refreshing}
-              aria-label={refreshing ? 'Actualizando contenido' : 'Actualizar contenido del día'}
-              className="p-2 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all"
-              style={{ backdropFilter: 'blur(10px)' }}
-            >
-              <RefreshCw
-                className={`w-4 h-4 text-slate-700 dark:text-slate-300 ${refreshing ? 'animate-spin' : ''}`}
-                strokeWidth={2.5}
-              />
-            </button>
-          </div>
-
-          {/* Día y mes - Tipografía grande iOS */}
-          <h1 className="text-[34px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight mb-2">
-            {today}
-          </h1>
-
-          {/* Badge del tiempo litúrgico */}
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 dark:bg-slate-800/70 backdrop-blur-md shadow-sm"
-            style={{ backdropFilter: 'blur(10px) saturate(180%)' }}
-          >
-            <div
-              className="w-2 h-2 rounded-full shadow-sm"
-              style={{ backgroundColor: liturgicalSeason.gradient[0] }}
-            />
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 tracking-wide">
-              {liturgicalSeason.name}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Contenido scrolleable */}
+    <div className="flex flex-col h-full bg-background overflow-hidden relative">
+      {/* Main Content with Pull-to-Refresh */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-6 py-6 pb-28 relative"
+        className="flex-1 overflow-y-auto"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -220,159 +178,254 @@ export function Home() {
           transition: isPulling ? 'none' : 'transform 0.3s ease-out',
         }}
       >
-        {/* Pull to refresh indicator - iOS 26 Liquid Glass */}
+        {/* Pull to Refresh Indicator */}
         {isPulling && (
+          <div className="absolute top-2 w-full flex justify-center pointer-events-none z-20">
+            <RefreshCw
+              className={`w-5 h-5 text-slate-400 transition-transform ${pullDistance > 60 ? 'rotate-180' : ''}`}
+              style={{ opacity: Math.min(pullDistance / 60, 1) }}
+            />
+          </div>
+        )}
+
+        <div className="px-5 pt-12 pb-32 space-y-5">
+          {/* ═══════════════════════════════════════════════════════════════
+              HERO SECTION - Gradient Litúrgico Animado
+              ═══════════════════════════════════════════════════════════════ */}
           <div
-            className="absolute top-0 left-0 right-0 flex items-center justify-center z-50"
+            className="relative overflow-hidden rounded-3xl p-6 stagger-item"
             style={{
-              transform: `translateY(-${Math.max(0, 50 - pullDistance)}px)`,
-              opacity: Math.min(pullDistance / 60, 1),
+              background: `linear-gradient(135deg, ${liturgicalColor} 0%, ${liturgicalSeason.gradient[1]} 100%)`,
             }}
           >
+            {/* Decorative Elements */}
             <div
-              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-full p-4 shadow-2xl border border-white/30 dark:border-slate-700/30"
-              style={{ backdropFilter: 'blur(30px) saturate(180%)' }}
-            >
-              <RefreshCw
-                className={`w-6 h-6 text-blue-600 dark:text-blue-400 ${pullDistance > 60 ? 'animate-spin' : ''}`}
-                style={{
-                  transform: pullDistance > 60 ? 'none' : `rotate(${pullDistance * 4}deg)`,
-                  transition: pullDistance > 60 ? 'none' : 'transform 0.1s ease-out',
-                }}
-                strokeWidth={2.5}
-              />
-            </div>
-          </div>
-        )}
+              className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-20"
+              style={{
+                background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)',
+              }}
+            />
+            <div
+              className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full opacity-15"
+              style={{
+                background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)',
+              }}
+            />
 
-        {/* Mensaje de error */}
-        {error && (
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="bg-red-50 border-l-4 border-red-500 rounded-2xl p-4 mb-6 shadow-sm"
-          >
-            <div className="flex gap-3 items-start">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-red-800 mb-1">Error al cargar</p>
-                <p className="text-sm text-red-700">{error}</p>
-                <button
-                  onClick={() => {
-                    haptics.medium();
-                    handleRefresh();
-                  }}
-                  disabled={refreshing}
-                  aria-label="Reintentar carga del contenido"
-                  className="mt-3 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
-                >
-                  Reintentar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Santo del día - iOS 26 Liquid Glass Lite */}
-        {santo && (
-          <article
-            role="region"
-            aria-labelledby="santo-heading"
-            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 mb-6 shadow-lg border border-white/20 dark:border-slate-700/30 animate-spring-in"
-            style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-          >
-            <div className="flex items-start gap-4 mb-5">
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-                <Sparkles className="w-7 h-7 text-white" strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 pt-1">
-                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
-                  Santo del día
-                </p>
-                <h2
-                  id="santo-heading"
-                  className="text-[17px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight"
-                >
-                  {santo.nombre}
-                </h2>
-              </div>
-            </div>
-            <div className="h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent mb-5"></div>
-            <p className="text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight">
-              {santo.descripcion}
-            </p>
-          </article>
-        )}
+            <div className="relative z-10 flex justify-between items-start">
+              <div>
+                {/* Liturgical Badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm mb-3">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span className="text-xs font-bold text-white/90 uppercase tracking-wide">
+                    {liturgicalSeason.name}
+                  </span>
+                </div>
 
-        {/* Evangelio del día - iOS 26 Liquid Glass Lite */}
-        {evangelio && (
-          <article
-            role="region"
-            aria-labelledby="evangelio-heading"
-            className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[28px] p-6 shadow-lg border border-white/20 dark:border-slate-700/30 animate-spring-in"
-            style={{ backdropFilter: 'blur(20px) saturate(180%)' }}
-          >
-            <div className="flex items-start gap-4 mb-5">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-                <BookOpen className="w-7 h-7 text-white" strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 pt-1">
-                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
-                  Evangelio del día
+                {/* Date Display */}
+                <p className="text-white/70 text-sm font-semibold uppercase tracking-wider">
+                  {weekday}
                 </p>
-                <h2
-                  id="evangelio-heading"
-                  className="text-[17px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight"
-                >
-                  {evangelio.cita}
-                </h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-6xl font-black text-white leading-none">{dateStr}</span>
+                  <span className="text-2xl font-bold text-white/80">{monthStr}</span>
+                </div>
               </div>
-            </div>
-            <div className="h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent mb-5"></div>
-            <p
-              className={`text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed tracking-tight text-justify ${
-                !gospelExpanded ? 'line-clamp-5' : ''
-              }`}
-            >
-              {evangelio.texto}
-            </p>
-            {evangelio.texto && evangelio.texto.length > 200 && (
+
+              {/* Refresh Button */}
               <button
-                onClick={() => {
-                  haptics.light();
-                  setGospelExpanded(!gospelExpanded);
-                }}
-                aria-label={
-                  gospelExpanded ? 'Ver menos texto del evangelio' : 'Leer más del evangelio'
-                }
-                aria-expanded={gospelExpanded}
-                className="mt-6 flex items-center gap-2.5 px-4 py-3 bg-gradient-to-br from-indigo-50 to-indigo-100/80 dark:from-indigo-900/30 dark:to-indigo-800/30 text-indigo-600 dark:text-indigo-400 rounded-2xl font-semibold text-sm hover:from-indigo-100 hover:to-indigo-200/80 dark:hover:from-indigo-900/40 dark:hover:to-indigo-800/40 transition-all backdrop-blur-sm min-h-[44px]"
-                style={{ backdropFilter: 'blur(10px)' }}
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 active:scale-95 transition-all disabled:opacity-50"
+                aria-label="Actualizar"
               >
-                <span className="tracking-tight">{gospelExpanded ? 'Ver menos' : 'Leer más'}</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${gospelExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
-            )}
-            {evangelio.reflexion && (
-              <div
-                className="mt-5 p-4 bg-white/60 dark:bg-slate-700/60 backdrop-blur-md rounded-2xl border border-white/20 dark:border-slate-600/30"
-                style={{ backdropFilter: 'blur(10px)' }}
+            </div>
+          </div>
+
+          {/* Error State */}
+          {error && (
+            <Card
+              variant="flat"
+              className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 flex items-start gap-4 stagger-item"
+            >
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 dark:text-red-200 text-sm">Error</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+              </div>
+            </Card>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════
+              BENTO GRID LAYOUT - Cards Modulares
+              ═══════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Saint Card - Large */}
+            {santo && (
+              <Card
+                variant="flat"
+                padding="md"
+                interactive
+                className="col-span-1 stagger-item touch-feedback"
+                style={{ animationDelay: '0.1s' }}
+                onClick={() => setShowSaintModal(true)}
               >
-                <p className="text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed tracking-tight">
-                  {evangelio.reflexion}
+                <div className="flex flex-col h-full">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                    style={{
+                      background: `linear-gradient(135deg, ${liturgicalColor}20, ${liturgicalColor}10)`,
+                    }}
+                  >
+                    <Sparkles
+                      className="w-5 h-5"
+                      style={{ color: liturgicalColor }}
+                      strokeWidth={2.5}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
+                    Santo del día
+                  </span>
+                  <h3 className="text-sm font-bold text-foreground leading-snug line-clamp-3">
+                    {santo.nombre}
+                  </h3>
+                </div>
+              </Card>
+            )}
+
+            {/* Upcoming Events Card */}
+            <Card
+              variant="flat"
+              padding="md"
+              interactive
+              onClick={goToCalendar}
+              className="col-span-1 stagger-item touch-feedback"
+              style={{ animationDelay: '0.15s' }}
+            >
+              <div className="flex flex-col h-full">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-3">
+                  <CalendarIcon
+                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    strokeWidth={2.5}
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
+                  Próximos eventos
+                </span>
+                {upcomingEvents.length > 0 && upcomingEvents[0] ? (
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground leading-snug line-clamp-2">
+                      {upcomingEvents[0].title}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {dayjs(upcomingEvents[0].start).format('ddd D, HH:mm')}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Sin eventos próximos</p>
+                )}
+                <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-xs font-semibold mt-2">
+                  Ver calendario
+                  <ChevronRight className="w-3 h-3" />
+                </div>
+              </div>
+            </Card>
+
+            {/* Gospel Card - Full Width */}
+            {evangelio && (
+              <Card
+                variant="flat"
+                padding="lg"
+                className="col-span-2 stagger-item"
+                style={{ animationDelay: '0.2s' }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <BookOpen className="w-6 h-6 text-white" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                      Evangelio del día
+                    </span>
+                    <h2 className="text-lg font-bold text-foreground">{evangelio.cita}</h2>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <p
+                    className={`text-sm text-slate-600 dark:text-slate-300 leading-relaxed text-justify ${!gospelExpanded ? 'line-clamp-6' : ''}`}
+                  >
+                    {evangelio.texto}
+                  </p>
+
+                  {/* Expand Text Gradient Overlay */}
+                  {!gospelExpanded && evangelio.texto && evangelio.texto.length > 100 && (
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[var(--card-background)] to-transparent pointer-events-none" />
+                  )}
+                </div>
+
+                {evangelio.texto && evangelio.texto.length > 100 && (
+                  <button
+                    onClick={() => {
+                      setGospelExpanded(!gospelExpanded);
+                      haptics.light();
+                    }}
+                    className="mt-4 w-full py-3 text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-[0.98]"
+                  >
+                    {gospelExpanded ? 'Ver menos' : 'Leer evangelio completo'}
+                  </button>
+                )}
+
+                {evangelio.reflexion && gospelExpanded && (
+                  <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
+                    <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                      Reflexión
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 italic leading-relaxed">
+                      {evangelio.reflexion}
+                    </p>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* Saint Description Card REMOVED (moved to Modal) */}
+          </div>
+        </div>
+      </div>
+
+      {/* Saint Details Modal */}
+      <Modal isOpen={showSaintModal} onClose={() => setShowSaintModal(false)} title="Santo del día">
+        {santo && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${liturgicalColor}20, ${liturgicalColor}10)`,
+                }}
+              >
+                <Sparkles className="w-8 h-8" style={{ color: liturgicalColor }} strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold leading-tight text-foreground">{santo.nombre}</h3>
+                <p className="text-sm text-slate-500 mt-1 capitalize">
+                  {weekday}, {dateStr} de {monthStr}
                 </p>
               </div>
-            )}
-          </article>
+            </div>
+
+            <div className="h-px w-full bg-slate-100 dark:bg-slate-800" />
+
+            <div className="text-base text-slate-600 dark:text-slate-300 leading-relaxed text-justify space-y-4">
+              {santo.descripcion}
+            </div>
+          </div>
         )}
-      </div>
+      </Modal>
     </div>
   );
 }

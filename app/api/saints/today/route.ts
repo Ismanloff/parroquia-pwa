@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getTodayDate } from '@/lib/dayjs';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Santo por defecto si no hay uno específico para el día
 const DEFAULT_SAINT = {
   nombre: 'San Juan de la Cruz',
