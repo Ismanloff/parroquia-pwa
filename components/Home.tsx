@@ -9,14 +9,12 @@ import {
   Calendar as CalendarIcon,
   ChevronRight,
   Clock,
-  ChevronDown,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { haptics } from '@/lib/haptics';
-import { Card } from '@/components/ui/Card';
 import { useNavigationStore } from '@/lib/store/navigationStore';
 
 dayjs.locale('es');
@@ -67,7 +65,7 @@ export function Home() {
         fetch(`/api/saints/today?t=${new Date().getTime()}`),
         fetch('/api/gospel/today'),
         fetch(
-          `/api/calendar/events?start=${new Date().toISOString()}&end=${dayjs().add(3, 'day').toISOString()}`
+          `/api/calendar/events?start=${new Date().toISOString()}&end=${dayjs().add(7, 'day').toISOString()}`
         ),
       ]);
 
@@ -152,20 +150,23 @@ export function Home() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-background">
-        <div className="pt-14 px-5 pb-6">
+      <div className="flex flex-col h-full bg-slate-50 dark:bg-background">
+        <div className="pt-16 px-5 pb-6">
           {/* Skeleton Header */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="h-8 w-48 shimmer rounded-xl" />
-            <div className="h-10 w-10 shimmer rounded-full" />
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <div className="h-5 w-32 shimmer rounded-lg mb-2" />
+              <div className="h-10 w-56 shimmer rounded-xl" />
+            </div>
+            <div className="h-12 w-12 shimmer rounded-2xl" />
           </div>
           {/* Skeleton Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-36 shimmer rounded-3xl" />
-            <div className="h-36 shimmer rounded-3xl" />
+            <div className="h-44 shimmer rounded-3xl" />
+            <div className="h-44 shimmer rounded-3xl" />
           </div>
-          <div className="h-32 shimmer rounded-3xl mt-4" />
-          <div className="h-32 shimmer rounded-3xl mt-4" />
+          <div className="h-24 shimmer rounded-3xl mt-4" />
+          <div className="h-24 shimmer rounded-3xl mt-4" />
         </div>
       </div>
     );
@@ -175,6 +176,7 @@ export function Home() {
   const dateStr = today.format('D');
   const monthStr = today.format('MMMM');
   const weekdayStr = today.format('dddd');
+  const yearStr = today.format('YYYY');
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative">
@@ -200,21 +202,36 @@ export function Home() {
           </div>
         )}
 
-        <div className="px-5 pt-14 pb-32 space-y-5">
+        <div className="px-5 pt-14 pb-32 space-y-6">
           {/* ═══════════════════════════════════════════════════════════════
-              HEADER - Fecha y tiempo litúrgico (estilo de la referencia)
+              PREMIUM HEADER - Diseño más impactante
               ═══════════════════════════════════════════════════════════════ */}
-          <header className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-foreground capitalize">
-                {weekdayStr}, {dateStr} de {monthStr}
+          <header className="flex items-start justify-between">
+            <div>
+              {/* Liturgical Badge */}
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className="w-2 h-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: liturgicalSeason.gradient[0] }}
+                />
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                  {liturgicalSeason.name}
+                </span>
+              </div>
+              {/* Date Display - Más grande y prominente */}
+              <h1 className="text-3xl font-black text-foreground leading-tight capitalize">
+                {weekdayStr}
               </h1>
-              <ChevronDown className="w-5 h-5 text-slate-400" />
+              <p className="text-lg font-medium text-slate-500 dark:text-slate-400 capitalize">
+                {dateStr} de {monthStr}, {yearStr}
+              </p>
             </div>
+
+            {/* Refresh Button - Más prominente */}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-2.5 rounded-full bg-white dark:bg-slate-800 shadow-sm hover:shadow-md active:scale-95 transition-all disabled:opacity-50"
+              className="p-3 rounded-2xl bg-white dark:bg-slate-800 shadow-md hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 border border-slate-100 dark:border-slate-700"
               aria-label="Actualizar"
             >
               <RefreshCw
@@ -223,131 +240,146 @@ export function Home() {
             </button>
           </header>
 
-          {/* Liturgical Season Badge */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-              {liturgicalSeason.name}
-            </span>
-            <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: liturgicalSeason.gradient[0] }}
-            />
-          </div>
-
           {/* Error State */}
           {error && (
-            <Card
-              variant="flat"
-              className="bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 flex items-start gap-4"
-            >
-              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-4 flex items-start gap-3 border border-red-100 dark:border-red-900/30">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-900 dark:text-red-200 text-sm">Error</p>
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                <p className="font-semibold text-red-800 dark:text-red-200">Error de conexión</p>
+                <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* ═══════════════════════════════════════════════════════════════
-              MAIN CARDS GRID - Estilo premium minimalista
+              MAIN CARDS GRID - Bento Grid Style Premium
               ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Evangelio Card */}
+            {/* Evangelio Card - Premium Style */}
             <button
               onClick={goToEvangelio}
-              className="bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+              className="group bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
             >
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
-                <BookOpen
-                  className="w-6 h-6 text-amber-600 dark:text-amber-400"
-                  strokeWidth={1.5}
-                />
+              {/* Subtle Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+              <div className="relative z-10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-900/20 flex items-center justify-center mb-4 shadow-sm">
+                  <BookOpen
+                    className="w-7 h-7 text-amber-600 dark:text-amber-400"
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <h2 className="text-xl font-bold text-foreground leading-tight">Evangelio</h2>
+                <p className="text-base text-slate-500 dark:text-slate-400 mt-1">y lecturas</p>
+                {evangelio && (
+                  <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-3 uppercase tracking-wide">
+                    {evangelio.cita}
+                  </p>
+                )}
               </div>
-              <h2 className="text-lg font-bold text-foreground leading-tight">Evangelio</h2>
-              <p className="text-base text-slate-500 dark:text-slate-400 mt-0.5">y lecturas</p>
-              {evangelio && (
-                <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mt-2 uppercase tracking-wide">
-                  {evangelio.cita}
-                </p>
-              )}
             </button>
 
-            {/* Santo del día Card */}
+            {/* Santo del día Card - Premium Style */}
             <button
               onClick={goToSanto}
-              className="bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+              className="group bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
             >
+              {/* Subtle Gradient Overlay */}
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                style={{ backgroundColor: `${liturgicalSeason.gradient[0]}20` }}
-              >
-                <Sparkles
-                  className="w-6 h-6"
-                  style={{ color: liturgicalSeason.gradient[0] }}
-                  strokeWidth={1.5}
-                />
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{
+                  background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}10, transparent)`,
+                }}
+              />
+
+              <div className="relative z-10">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}25, ${liturgicalSeason.gradient[0]}10)`,
+                  }}
+                >
+                  <Sparkles
+                    className="w-7 h-7"
+                    style={{ color: liturgicalSeason.gradient[0] }}
+                    strokeWidth={1.5}
+                  />
+                </div>
+                <h2 className="text-xl font-bold text-foreground leading-tight">Santo</h2>
+                <p className="text-base text-slate-500 dark:text-slate-400 mt-1">del día</p>
+                {santo && (
+                  <p
+                    className="text-sm font-semibold mt-3 line-clamp-1"
+                    style={{ color: liturgicalSeason.gradient[0] }}
+                  >
+                    {santo.nombre}
+                  </p>
+                )}
               </div>
-              <h2 className="text-lg font-bold text-foreground leading-tight">Santo</h2>
-              <p className="text-base text-slate-500 dark:text-slate-400 mt-0.5">del día</p>
-              {santo && (
-                <p className="text-sm font-medium text-slate-400 dark:text-slate-500 mt-2 line-clamp-1">
-                  {santo.nombre}
-                </p>
-              )}
             </button>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
-              UPCOMING EVENTS CARD
+              UPCOMING EVENTS - Enhanced Card
               ═══════════════════════════════════════════════════════════════ */}
           <button
             onClick={goToCalendar}
-            className="w-full bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+            className="w-full bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center shrink-0 shadow-sm">
                 <CalendarIcon
-                  className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                  className="w-7 h-7 text-blue-600 dark:text-blue-400"
                   strokeWidth={1.5}
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-foreground">Próximos eventos</h2>
+                <h2 className="text-xl font-bold text-foreground">Próximos eventos</h2>
                 {upcomingEvents.length > 0 && upcomingEvents[0] ? (
-                  <div className="mt-1">
-                    <p className="text-base text-slate-600 dark:text-slate-300 truncate">
+                  <div className="mt-1.5">
+                    <p className="text-base text-slate-600 dark:text-slate-300 truncate font-medium">
                       {upcomingEvents[0].title}
                     </p>
-                    <p className="text-sm text-slate-400 flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      {dayjs(upcomingEvents[0].start).format('ddd D, HH:mm')}
+                    <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1">
+                      <Clock className="w-4 h-4" />
+                      {dayjs(upcomingEvents[0].start).format('dddd D, HH:mm')}
                     </p>
                   </div>
                 ) : (
                   <p className="text-base text-slate-400 mt-1">Sin eventos próximos</p>
                 )}
               </div>
-              <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" />
+              <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
             </div>
           </button>
 
           {/* ═══════════════════════════════════════════════════════════════
-              ADDITIONAL INFO / QUICK ACTIONS (opcional)
+              LITURGICAL SEASON INFO CARD
               ═══════════════════════════════════════════════════════════════ */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center gap-4">
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg"
                 style={{
                   background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}, ${liturgicalSeason.gradient[1]})`,
                 }}
               >
                 <span className="text-2xl font-black text-white">{dateStr}</span>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground">{liturgicalSeason.name}</h3>
-                <p className="text-base text-slate-500 dark:text-slate-400">Tiempo litúrgico</p>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-foreground">{liturgicalSeason.name}</h3>
+                <p className="text-base text-slate-500 dark:text-slate-400">
+                  Tiempo litúrgico actual
+                </p>
               </div>
+              <div
+                className="w-3 h-3 rounded-full shadow-lg"
+                style={{
+                  backgroundColor: liturgicalSeason.gradient[0],
+                  boxShadow: `0 0 12px ${liturgicalSeason.gradient[0]}50`,
+                }}
+              />
             </div>
           </div>
         </div>

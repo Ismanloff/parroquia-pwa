@@ -282,8 +282,9 @@ export function Settings() {
 
         <div className="text-center pb-8 pt-4">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">
-            Versión 1.0.0
+            Versión 2.0.0
           </p>
+          <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-1">© 2025 Parroquia</p>
         </div>
       </div>
     </div>
