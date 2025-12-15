@@ -58,6 +58,14 @@ export function Home() {
   // Liturgical color for subtle accents
   const liturgicalSeason = useMemo(() => getLiturgicalSeason(new Date()), []);
 
+  // Dynamic greeting based on time of day
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Buenos días';
+    if (hour >= 12 && hour < 20) return 'Buenas tardes';
+    return 'Buenas noches';
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       setError(null);
@@ -192,13 +200,21 @@ export function Home() {
           transition: isPulling ? 'none' : 'transform 0.3s ease-out',
         }}
       >
-        {/* Pull to Refresh Indicator */}
-        {isPulling && (
-          <div className="absolute top-2 w-full flex justify-center pointer-events-none z-20">
-            <RefreshCw
-              className={`w-5 h-5 text-slate-400 transition-transform ${pullDistance > 60 ? 'rotate-180' : ''}`}
-              style={{ opacity: Math.min(pullDistance / 60, 1) }}
-            />
+        {/* Pull to Refresh Indicator - Only visible when actively pulling */}
+        {isPulling && pullDistance > 10 && (
+          <div
+            className="absolute top-0 w-full flex justify-center pointer-events-none z-20"
+            style={{ paddingTop: Math.min(pullDistance / 3, 20) }}
+          >
+            <div className="bg-white dark:bg-slate-800 rounded-full p-2 shadow-lg">
+              <RefreshCw
+                className={`w-5 h-5 text-blue-500 transition-transform ${pullDistance > 60 ? 'rotate-180' : ''}`}
+                style={{
+                  opacity: Math.min(pullDistance / 60, 1),
+                  transform: `rotate(${pullDistance * 3}deg)`,
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -208,23 +224,27 @@ export function Home() {
               ═══════════════════════════════════════════════════════════════ */}
           <header className="flex items-start justify-between">
             <div>
-              {/* Liturgical Badge */}
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: liturgicalSeason.gradient[0] }}
-                />
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                  {liturgicalSeason.name}
-                </span>
-              </div>
+              {/* Greeting */}
+              <p className="text-base font-medium text-slate-400 dark:text-slate-500 mb-1">
+                {greeting} ✨
+              </p>
               {/* Date Display - Más grande y prominente */}
               <h1 className="text-3xl font-black text-foreground leading-tight capitalize">
                 {weekdayStr}
               </h1>
-              <p className="text-lg font-medium text-slate-500 dark:text-slate-400 capitalize">
-                {dateStr} de {monthStr}, {yearStr}
+              <p className="text-lg font-medium text-slate-500 dark:text-slate-400">
+                {dateStr} de {monthStr.toLowerCase()} de {yearStr}
               </p>
+              {/* Liturgical Badge */}
+              <div className="flex items-center gap-2 mt-2">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: liturgicalSeason.gradient[0] }}
+                />
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+                  {liturgicalSeason.name}
+                </span>
+              </div>
             </div>
 
             {/* Refresh Button - Más prominente */}
@@ -353,35 +373,6 @@ export function Home() {
               <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
             </div>
           </button>
-
-          {/* ═══════════════════════════════════════════════════════════════
-              LITURGICAL SEASON INFO CARD
-              ═══════════════════════════════════════════════════════════════ */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700/50">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg"
-                style={{
-                  background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}, ${liturgicalSeason.gradient[1]})`,
-                }}
-              >
-                <span className="text-2xl font-black text-white">{dateStr}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-foreground">{liturgicalSeason.name}</h3>
-                <p className="text-base text-slate-500 dark:text-slate-400">
-                  Tiempo litúrgico actual
-                </p>
-              </div>
-              <div
-                className="w-3 h-3 rounded-full shadow-lg"
-                style={{
-                  backgroundColor: liturgicalSeason.gradient[0],
-                  boxShadow: `0 0 12px ${liturgicalSeason.gradient[0]}50`,
-                }}
-              />
-            </div>
-          </div>
         </div>
       </div>
     </div>
