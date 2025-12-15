@@ -825,7 +825,7 @@ export function CalendarComponent() {
       {activeEvent && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           <button
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={closeEvent}
             aria-label="Cerrar detalles"
           />
@@ -833,65 +833,117 @@ export function CalendarComponent() {
           <div
             role="dialog"
             aria-modal="true"
-            className="relative w-full max-w-lg bg-white dark:bg-slate-950 rounded-t-[32px] shadow-2xl border-t border-white/10 dark:border-slate-800/50 px-6 pt-4 pb-6 pb-safe animate-slide-up"
+            className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[28px] shadow-2xl animate-slide-up"
+            style={{ maxHeight: '85vh' }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
-              <span className="sr-only">Detalles del evento</span>
-              <button
-                onClick={closeEvent}
-                className="ml-auto p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors active:scale-95"
-                aria-label="Cerrar"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            {/* Drag Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-xl font-extrabold text-foreground leading-snug">
-                  {activeEvent.title}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 font-semibold">
-                  {capitalize(dayjs(activeEvent.start).format('dddd'))},{' '}
-                  {dayjs(activeEvent.start).format('D [de] MMMM')} · {formatEventTime(activeEvent)}
-                </p>
-              </div>
+            {/* Close Button */}
+            <button
+              onClick={closeEvent}
+              className="absolute top-3 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-              {(activeEvent.location || activeEvent.description) && (
-                <Card variant="flat" className="space-y-3">
-                  {activeEvent.location && (
-                    <div className="flex items-start gap-3 text-sm">
-                      <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
-                      <p className="text-slate-700 dark:text-slate-200">{activeEvent.location}</p>
-                    </div>
-                  )}
-                  {activeEvent.description && (
-                    <div className="flex items-start gap-3 text-sm">
-                      <Clock className="w-4 h-4 text-slate-400 mt-0.5" />
-                      <p className="text-slate-700 dark:text-slate-200 whitespace-pre-line">
-                        {activeEvent.description}
-                      </p>
-                    </div>
-                  )}
-                </Card>
-              )}
+            {/* Content - Scrollable */}
+            <div
+              className="px-6 pb-8 overflow-y-auto"
+              style={{
+                maxHeight: 'calc(85vh - 60px)',
+                paddingBottom: 'max(2rem, env(safe-area-inset-bottom))',
+              }}
+            >
+              <div className="space-y-5">
+                {/* Title & Time */}
+                <div>
+                  <h2 className="text-2xl font-black text-foreground leading-tight pr-8">
+                    {activeEvent.title}
+                  </h2>
+                  <p className="mt-2 text-base text-slate-500 dark:text-slate-400 font-medium">
+                    {capitalize(dayjs(activeEvent.start).format('dddd'))},{' '}
+                    {dayjs(activeEvent.start).format('D [de] MMMM [de] YYYY')}
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {formatEventTime(activeEvent)}
+                  </p>
+                </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => void handleShareEvent(activeEvent)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 font-bold text-sm hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors active:scale-95"
-                >
-                  <Share2 className="w-4 h-4" />
-                  Compartir
-                </button>
-                <button
-                  onClick={() => downloadICS(activeEvent)}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors active:scale-95"
-                >
-                  <Download className="w-4 h-4" />
-                  Añadir
-                </button>
+                {/* Location & Description */}
+                {(activeEvent.location || activeEvent.description) && (
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 space-y-4">
+                    {activeEvent.location && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                          <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                            Ubicación
+                          </p>
+                          <p className="text-base text-foreground font-medium mt-0.5">
+                            {activeEvent.location}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {activeEvent.description && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                          <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                            Descripción
+                          </p>
+                          <p className="text-base text-slate-700 dark:text-slate-200 whitespace-pre-line mt-0.5">
+                            {activeEvent.description}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Category Badge */}
+                {(() => {
+                  const category = detectCategory(activeEvent.title || '');
+                  const categoryMeta = CATEGORY_META[category];
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'px-3 py-1.5 rounded-full text-sm font-bold',
+                          categoryMeta.pill
+                        )}
+                      >
+                        {categoryMeta.label}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => void handleShareEvent(activeEvent)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-base hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-[0.98]"
+                  >
+                    <Share2 className="w-5 h-5" />
+                    Compartir
+                  </button>
+                  <button
+                    onClick={() => downloadICS(activeEvent)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-700 transition-colors active:scale-[0.98]"
+                  >
+                    <Download className="w-5 h-5" />
+                    Añadir
+                  </button>
+                </div>
               </div>
             </div>
           </div>
