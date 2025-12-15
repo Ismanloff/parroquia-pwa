@@ -229,6 +229,35 @@ html {
   animation: bounce-subtle 0.6s ease-in-out forwards;
 }
 
+@keyframes progress-bar {
+  0% {
+    width: 0%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress-bar 3s ease-in-out infinite;
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
 .animate-toast-slide-down {
   animation: toast-slide-down 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
