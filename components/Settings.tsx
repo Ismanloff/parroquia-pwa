@@ -5,22 +5,21 @@ import {
   Sun,
   Moon,
   Smartphone,
-  Settings as SettingsIcon,
   Bell,
-  BellOff,
   Calendar,
   BookOpen,
   Sparkles,
   LogOut,
-  User,
   MessageCircle,
-  ExternalLink,
   ChevronRight,
+  RefreshCw,
+  Download,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { InstallButton } from '@/components/install';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
+import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { setupPushNotifications } from '@/lib/firebase/messaging';
@@ -31,6 +30,8 @@ export function Settings() {
   const { themeMode, setThemeMode } = useTheme();
   const { user, signOut, isSupabaseConfigured } = useAuth();
   const { isInstalled } = useInstallPrompt();
+  const { updateAvailable, updateServiceWorker, checkForUpdates } = useServiceWorker();
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermission>('default');
@@ -81,6 +82,29 @@ export function Settings() {
       await signOut();
       haptics.success();
     }
+  };
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    haptics.light();
+
+    try {
+      const hasUpdate = await checkForUpdates();
+      if (hasUpdate) {
+        toast.success('¡Nueva versión encontrada!');
+      } else {
+        toast.success('Estás usando la última versión');
+      }
+    } catch {
+      toast.error('Error al buscar actualizaciones');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleForceUpdate = () => {
+    haptics.success();
+    updateServiceWorker();
   };
 
   const themeOptions = [
@@ -238,6 +262,55 @@ export function Settings() {
               ))}
             </Card>
           )}
+        </section>
+
+        {/* Updates Section */}
+        <section>
+          <h2 className="section-title">Actualizaciones</h2>
+          <Card
+            variant="flat"
+            padding="none"
+            className="divide-y divide-slate-100 dark:divide-slate-800"
+          >
+            {/* Check for Updates */}
+            <button
+              onClick={handleCheckUpdate}
+              disabled={checkingUpdate}
+              className="w-full flex items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors disabled:opacity-50"
+            >
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-lg mr-4">
+                <RefreshCw className={cn('w-5 h-5', checkingUpdate && 'animate-spin')} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-foreground">Buscar actualizaciones</p>
+                <p className="text-xs text-slate-500">Verificar nueva versión</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-300" />
+            </button>
+
+            {/* Apply Update - Only shown when update is available */}
+            {updateAvailable && (
+              <button
+                onClick={handleForceUpdate}
+                className="w-full flex items-center p-4 bg-green-50/50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
+              >
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg mr-4">
+                  <Download className="w-5 h-5" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-green-700 dark:text-green-400">
+                    ¡Nueva versión lista!
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-500">
+                    Toca para actualizar ahora
+                  </p>
+                </div>
+                <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+                  NUEVO
+                </span>
+              </button>
+            )}
+          </Card>
         </section>
 
         {/* Support & Install */}
