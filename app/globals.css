@@ -820,16 +820,17 @@ html {
 
 /* Agenda Panel */
 .cal-agenda-panel {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   background: var(--cal-surface);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
   touch-action: none;
-  will-change: transform;
+  will-change: height;
+  z-index: 30;
 }
 
 .cal-agenda-handle {

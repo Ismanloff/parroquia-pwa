@@ -1077,7 +1077,7 @@ export function CalendarComponent() {
         </div>
       ) : (
         // Month Views (compact/detailed)
-        <div className="flex-1 relative">
+        <div className="flex-1 overflow-y-auto">
           {/* Calendar Grid */}
           <div className="bg-[var(--cal-surface)]">
             <WeekdayRow />
@@ -1090,23 +1090,27 @@ export function CalendarComponent() {
             />
             <div className="h-3" />
           </div>
-
-          {/* Draggable Agenda Panel */}
-          <AgendaPanel
-            selectedDate={selectedDate}
-            events={selectedEvents}
-            onEventTap={(e) => {
-              haptics.medium();
-              setActiveEvent(e);
-            }}
-            snapPoint={agendaSnap}
-            onSnapChange={setAgendaSnap}
-          />
+          {/* Spacer for agenda panel */}
+          <div style={{ height: '200px' }} />
         </div>
       )}
 
+      {/* Draggable Agenda Panel - Fixed at bottom for month views */}
+      {viewMode !== 'agenda' && (
+        <AgendaPanel
+          selectedDate={selectedDate}
+          events={selectedEvents}
+          onEventTap={(e) => {
+            haptics.medium();
+            setActiveEvent(e);
+          }}
+          snapPoint={agendaSnap}
+          onSnapChange={setAgendaSnap}
+        />
+      )}
+
       {/* Tab bar spacer */}
-      <div className="h-20 shrink-0 bg-[var(--cal-bg)]" />
+      <div className="h-16 shrink-0 bg-[var(--cal-bg)]" />
 
       {/* Event Detail Sheet */}
       {activeEvent && (
