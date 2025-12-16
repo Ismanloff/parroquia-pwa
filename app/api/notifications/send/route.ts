@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 import { messaging, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
+import { getAdminSecret, isAdminRequestAuthorized } from '@/lib/adminAuth';
 
 interface NotificationPayload {
   title: string;
@@ -21,6 +22,18 @@ interface NotificationPayload {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Auth admin (defense-in-depth, además del middleware)
+    if (!getAdminSecret()) {
+      return NextResponse.json(
+        { error: 'ADMIN_SECRET no está configurado. Bloqueando endpoint administrativo.' },
+        { status: 500 }
+      );
+    }
+
+    if (!isAdminRequestAuthorized(request)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     // Verificar configuración antes de proceder
     if (!isSupabaseAdminConfigured()) {
       return NextResponse.json(

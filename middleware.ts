@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getAdminSecret, isAdminRequestAuthorized } from './lib/adminAuth';
 
 export function middleware(request: NextRequest) {
+  const adminSecret = getAdminSecret();
+
   // Proteger rutas de admin
   if (request.nextUrl.pathname.startsWith('/admin')) {
     // Verificar autenticación básica (esto debería mejorarse con un sistema real de auth)
@@ -12,7 +15,12 @@ export function middleware(request: NextRequest) {
 
     const authCookie = request.cookies.get('admin-auth');
     const secretParam = request.nextUrl.searchParams.get('secret');
-    const validSecret = process.env.ADMIN_SECRET || 'parroquia-admin-2025';
+    const validSecret = adminSecret;
+
+    // En producción, si no hay ADMIN_SECRET configurado, bloquear el panel
+    if (!validSecret) {
+      return NextResponse.rewrite(new URL('/404', request.url));
+    }
 
     if (authCookie?.value === validSecret) {
       return NextResponse.next();
@@ -26,6 +34,7 @@ export function middleware(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
       });
       return response;
     }
@@ -34,22 +43,23 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL('/404', request.url));
   }
 
-  // Protección de API de envío (adicional a la lógica interna de la ruta)
-  if (request.nextUrl.pathname.startsWith('/api/notifications/send')) {
-    const headerSecret = request.headers.get('x-admin-secret');
-    const validSecret = process.env.ADMIN_SECRET || 'parroquia-admin-2025';
-
-    // Permitir si viene del mismo origen (browser admin panel) o tiene header
-    // En Next.js Server Actions o llamadas internas esto puede variar, pero para fetch cliente->api sirve
-    if (headerSecret !== validSecret) {
-      // Dejar pasar y que la API route maneje el error detallado o bloquear aquí
-      // La API route ya tiene su check, así que dejamos pasar
+  // Protección de APIs administrativas de notificaciones
+  if (request.nextUrl.pathname.startsWith('/api/notifications')) {
+    // /api/notifications/test POST es un self-test (no admin)
+    if (request.nextUrl.pathname === '/api/notifications/test' && request.method === 'POST') {
+      return NextResponse.next();
     }
+
+    if (!isAdminRequestAuthorized(request)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    return NextResponse.next();
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/notifications/send'],
+  matcher: ['/admin/:path*', '/api/notifications/:path*'],
 };

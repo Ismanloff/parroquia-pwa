@@ -85,13 +85,14 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 
     console.log('✅ Permiso de notificaciones concedido');
 
-    // Registrar Service Worker de Firebase
-    console.log('⚙️ Registrando Service Worker de Firebase...');
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log('✅ Service Worker registrado:', registration.scope);
-
+    // Asegurar Service Worker principal (PWA) - Push y caché comparten el mismo SW
+    console.log('⚙️ Asegurando Service Worker principal...');
+    const registration = await navigator.serviceWorker.register('/sw.js', {
+      updateViaCache: 'none',
+    });
+    await registration.update();
     await navigator.serviceWorker.ready;
-    console.log('✅ Service Worker ready');
+    console.log('✅ Service Worker listo:', registration.scope);
 
     // Obtener instancia de messaging
     console.log('🔥 Obteniendo instancia de Firebase Messaging...');

@@ -11,11 +11,16 @@ import {
   Smartphone,
   Wifi,
   Database,
-  Key,
   Settings,
   RefreshCw,
 } from 'lucide-react';
-import { setupPushNotifications, isIOS, isIOSPWA, getIOSVersion } from '@/lib/firebase/messaging';
+import {
+  requestNotificationPermission,
+  savePushToken,
+  isIOS,
+  isIOSPWA,
+  getIOSVersion,
+} from '@/lib/firebase/messaging';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import Link from 'next/link';
 
@@ -295,7 +300,8 @@ export default function NotificationsDiagnosticPage() {
         });
       };
 
-      const success = await setupPushNotifications();
+      const token = await requestNotificationPermission();
+      const success = token ? await savePushToken(token) : false;
 
       // Restaurar console.log
       console.log = originalLog;
@@ -323,12 +329,15 @@ export default function NotificationsDiagnosticPage() {
         });
 
         try {
+          if (!token) {
+            throw new Error('Token FCM no disponible para enviar prueba');
+          }
+
           const testResponse = await fetch('/api/notifications/test', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              title: 'Prueba de notificaciones',
-              body: 'Si ves esto, las notificaciones funcionan correctamente!',
+              token,
             }),
           });
 

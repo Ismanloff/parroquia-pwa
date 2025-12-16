@@ -79,6 +79,24 @@ SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
 NEXT_PUBLIC_SUPABASE_URL=https://wuvlujxzwfvqbegqehsh.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
 
+# Firebase (Push Notifications - cliente)
+NEXT_PUBLIC_FIREBASE_API_KEY=tu_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=tu_measurement_id
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=tu_vapid_key
+
+# Firebase Admin (Push Notifications - servidor)
+FIREBASE_PROJECT_ID=tu_project_id
+FIREBASE_CLIENT_EMAIL=tu_client_email
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Admin (proteger /admin y APIs)
+ADMIN_SECRET=una_clave_larga_y_unica
+
 # Resend (emails de autenticación)
 RESEND_API_KEY=tu_resend_api_key
 RESEND_FROM_EMAIL=Parroquia <noreply@tudominio.com>
@@ -154,6 +172,17 @@ En el dashboard de Vercel > Settings > Environment Variables, añade todas las v
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_VAPID_KEY`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+- `ADMIN_SECRET`
 - `PINECONE_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `GOOGLE_CALENDAR_ICS_URL`
@@ -177,6 +206,16 @@ Una vez desplegado:
 3. Prueba autenticación (login/registro)
 4. Instala la PWA en tu dispositivo
 5. Verifica funcionamiento offline
+
+## Panel Admin (Notificaciones)
+
+El panel admin se protege con `ADMIN_SECRET`:
+
+1. Configura `ADMIN_SECRET` (obligatorio en producción)
+2. Accede a `\/admin?secret=TU_ADMIN_SECRET` (esto guarda una cookie `admin-auth`)
+3. Desde ahí puedes usar:
+   - `\/admin\/notifications` (enviar notificaciones)
+   - `\/admin\/tokens` (ver/limpiar tokens)
 
 ## Arquitectura
 
@@ -263,6 +302,13 @@ Si el build falla en Vercel, verifica:
 - Verifica que estés usando HTTPS
 - Comprueba que `manifest.json` es accesible
 - Revisa la consola del navegador para errores del Service Worker
+
+### Push Notifications No Funcionan
+
+1. Verifica que la PWA esté instalada (en iOS solo funciona en modo standalone; iOS 16.4+)
+2. Confirma `NEXT_PUBLIC_FIREBASE_VAPID_KEY` y `NEXT_PUBLIC_FIREBASE_*`
+3. Para enviar notificaciones desde el servidor: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+4. En iOS, revisa la guía: `docs/FIREBASE-APNS-IOS-SETUP.md`
 
 ### Chatbot No Responde
 

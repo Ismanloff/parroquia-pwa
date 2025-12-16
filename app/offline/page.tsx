@@ -1,6 +1,6 @@
 'use client';
 
-import { WifiOff, RefreshCw, Home, BookOpen, Calendar, MessageCircle } from 'lucide-react';
+import { WifiOff, RefreshCw, Home, BookOpen, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 export default function OfflinePage() {
@@ -65,7 +65,7 @@ export default function OfflinePage() {
             </Link>
 
             <Link
-              href="/calendario"
+              href="/?tab=calendar"
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">

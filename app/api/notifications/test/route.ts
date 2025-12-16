@@ -1,13 +1,27 @@
 // API Route para diagnosticar configuración de Firebase
 // GET /api/notifications/test
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getAdminSecret, isAdminRequestAuthorized } from '@/lib/adminAuth';
+import { isFirebaseAdminConfigured, messaging } from '@/lib/firebase/admin';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Auth admin (defense-in-depth, además del middleware)
+  if (!getAdminSecret()) {
+    return NextResponse.json(
+      { error: 'ADMIN_SECRET no está configurado. Bloqueando endpoint administrativo.' },
+      { status: 500 }
+    );
+  }
+
+  if (!isAdminRequestAuthorized(request)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   const diagnostics = {
     timestamp: new Date().toISOString(),
-    environment: 'production',
+    environment: process.env.NODE_ENV || 'unknown',
     checks: {} as Record<string, any>,
   };
 
@@ -98,4 +112,63 @@ export async function GET() {
   };
 
   return NextResponse.json(diagnostics, { status: 200 });
+}
+
+/**
+ * POST: self-test (no admin) - envía una notificación de prueba a UN token
+ *
+ * Esto permite que un usuario verifique su configuración sin exponer endpoints
+ * administrativos que envían a todos los dispositivos.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    if (!isFirebaseAdminConfigured()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Firebase Admin no está configurado. Agrega FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY.',
+        },
+        { status: 500 }
+      );
+    }
+
+    const body: { token?: unknown } = await request.json();
+    const token = typeof body.token === 'string' ? body.token : null;
+
+    if (!token || token.length < 50) {
+      return NextResponse.json(
+        { success: false, error: 'token inválido o faltante' },
+        { status: 400 }
+      );
+    }
+
+    await messaging.send({
+      token,
+      notification: {
+        title: 'Prueba de notificaciones',
+        body: 'Si ves esto, las notificaciones funcionan correctamente.',
+      },
+      data: {
+        url: '/',
+      },
+      webpush: {
+        notification: {
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+        },
+        fcmOptions: {
+          link: '/',
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error('❌ Error al enviar self-test push:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
 }

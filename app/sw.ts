@@ -9,6 +9,8 @@ import {
   ExpirationPlugin,
   CacheableResponsePlugin,
 } from 'serwist';
+import { initializeApp, getApps } from 'firebase/app';
+import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
 // TypeScript declarations
 declare global {
@@ -77,24 +79,6 @@ const customCache = [
         new ExpirationPlugin({
           maxEntries: 20, // Últimas 20 consultas
           maxAgeSeconds: 5 * 60, // 5 minutos
-        }),
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-      ],
-    }),
-  },
-
-  // Supabase APIs - Network primero para datos en tiempo real
-  {
-    matcher: ({ url }: { url: URL }) => url.hostname.includes('.supabase.co'),
-    handler: new NetworkFirst({
-      cacheName: 'supabase-api',
-      networkTimeoutSeconds: 10,
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60, // 1 hora
         }),
         new CacheableResponsePlugin({
           statuses: [0, 200],
@@ -197,7 +181,6 @@ self.addEventListener('activate', (event) => {
                 !cacheName.includes('gospel-daily') &&
                 !cacheName.includes('saints-daily') &&
                 !cacheName.includes('calendar-events') &&
-                !cacheName.includes('supabase-api') &&
                 !cacheName.includes('google-calendar-ics') &&
                 !cacheName.includes('external-images') &&
                 !cacheName.startsWith('serwist-')
@@ -212,6 +195,99 @@ self.addEventListener('activate', (event) => {
       })
   );
 });
+
+/**
+ * Firebase Cloud Messaging (FCM) - Manejo de notificaciones en background
+ *
+ * Unificamos Push + PWA en UN solo Service Worker para evitar conflictos de scope
+ * (no puede haber dos SW distintos controlando '/').
+ */
+(() => {
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+
+  if (!apiKey || !authDomain || !projectId || !messagingSenderId || !appId) {
+    return;
+  }
+
+  const firebaseApp =
+    getApps().length > 0
+      ? getApps()[0]!
+      : initializeApp({
+          apiKey,
+          authDomain,
+          projectId,
+          storageBucket,
+          messagingSenderId,
+          appId,
+        });
+
+  const messaging = getMessaging(firebaseApp);
+
+  onBackgroundMessage(messaging, (payload) => {
+    const title = payload.notification?.title || 'App Parroquial';
+    const body = payload.notification?.body || 'Tienes una nueva notificación';
+
+    const url = payload.data?.url || '/';
+    const image = payload.notification?.image || payload.data?.image;
+
+    interface NotificationOptionsExtended extends NotificationOptions {
+      image?: string;
+      actions?: Array<{
+        action: string;
+        title: string;
+        icon?: string;
+      }>;
+    }
+
+    const options: NotificationOptionsExtended = {
+      body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
+      tag: 'app-parroquial-notification',
+      requireInteraction: false,
+      image,
+      data: {
+        url,
+        ...payload.data,
+      },
+      actions: [
+        { action: 'open', title: 'Abrir' },
+        { action: 'close', title: 'Cerrar' },
+      ],
+    };
+
+    self.registration.showNotification(title, options);
+  });
+
+  self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    if (event.action === 'close') {
+      return;
+    }
+
+    const targetUrl = new URL(
+      (event.notification.data as { url?: string } | undefined)?.url || '/',
+      self.location.origin
+    ).href;
+
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          if (client.url === targetUrl && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow ? self.clients.openWindow(targetUrl) : undefined;
+      })
+    );
+  });
+})();
 
 // Registrar event listeners de Serwist
 serwist.addEventListeners();

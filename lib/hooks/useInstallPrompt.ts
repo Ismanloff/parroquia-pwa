@@ -38,20 +38,23 @@ export function useInstallPrompt(): InstallPromptState {
     // Detectar si está en modo standalone (ya instalada)
     const checkInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isIOSStandalone = (window.navigator as any).standalone === true;
+      const isIOSStandalone =
+        (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
       setIsInstalled(isStandalone || isIOSStandalone);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
     };
 
     checkInstalled();
 
     // Detectar cambios (por si se instala mientras está abierta)
-    window.addEventListener('appinstalled', () => {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-    });
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('appinstalled', checkInstalled);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
@@ -99,7 +102,6 @@ export function useInstallPrompt(): InstallPromptState {
   // Función para mostrar el prompt de instalación
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) {
-      console.log('No deferred prompt available');
       return;
     }
 
@@ -111,10 +113,7 @@ export function useInstallPrompt(): InstallPromptState {
       const choiceResult = await deferredPrompt.userChoice;
 
       if (choiceResult.outcome === 'accepted') {
-        console.log('PWA instalada exitosamente! 🎉');
         setIsInstalled(true);
-      } else {
-        console.log('Usuario canceló la instalación');
       }
 
       // Limpiar el prompt (solo se puede usar una vez)

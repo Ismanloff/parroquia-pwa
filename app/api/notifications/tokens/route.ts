@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from '@/lib/supabaseAdmin';
 import { getMessaging, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
+import { getAdminSecret, isAdminRequestAuthorized } from '@/lib/adminAuth';
 
 // Helper para detectar plataforma
 const getPlatformFromUA = (userAgent: string | null): string => {
@@ -46,8 +47,20 @@ const parseUserAgent = (userAgent: string | null): { browser?: string; os?: stri
 /**
  * GET: Lista todos los tokens con información detallada
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    // Auth admin (defense-in-depth, además del middleware)
+    if (!getAdminSecret()) {
+      return NextResponse.json(
+        { error: 'ADMIN_SECRET no está configurado. Bloqueando endpoint administrativo.' },
+        { status: 500 }
+      );
+    }
+
+    if (!isAdminRequestAuthorized(request)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     // Verificar configuración
     if (!isSupabaseAdminConfigured()) {
       return NextResponse.json({ error: 'Supabase Admin no está configurado.' }, { status: 500 });
@@ -102,6 +115,18 @@ export async function GET(_request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Auth admin (defense-in-depth, además del middleware)
+    if (!getAdminSecret()) {
+      return NextResponse.json(
+        { error: 'ADMIN_SECRET no está configurado. Bloqueando endpoint administrativo.' },
+        { status: 500 }
+      );
+    }
+
+    if (!isAdminRequestAuthorized(request)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     // Verificar configuración
     if (!isSupabaseAdminConfigured()) {
       return NextResponse.json({ error: 'Supabase Admin no está configurado.' }, { status: 500 });

@@ -16,7 +16,8 @@ export function useServiceWorker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshingRef = useRef(false);
 
   // Verificar si hay un SW waiting
@@ -50,6 +51,7 @@ export function useServiceWorker() {
         if (!mounted) return;
 
         setRegistration(reg);
+        registrationRef.current = reg;
         setIsReady(true);
         console.log('✅ [SW] Registration successful:', reg.scope);
 
@@ -84,16 +86,19 @@ export function useServiceWorker() {
         await reg.update();
         console.log('🔄 [SW] Initial update check complete');
 
-        // Verificar periódicamente (cada 60 segundos)
-        checkIntervalRef.current = setInterval(async () => {
-          try {
-            await reg.update();
-            checkForWaitingWorker(reg);
-            console.log('🔄 [SW] Periodic update check');
-          } catch {
-            // Silently fail on periodic checks
-          }
-        }, 60 * 1000);
+        // Verificar periódicamente (cada 5 minutos)
+        checkIntervalRef.current = setInterval(
+          async () => {
+            try {
+              await reg.update();
+              checkForWaitingWorker(reg);
+              console.log('🔄 [SW] Periodic update check');
+            } catch {
+              // Silently fail on periodic checks
+            }
+          },
+          5 * 60 * 1000
+        );
       } catch (error) {
         console.error('❌ [SW] Registration failed:', error);
       }
@@ -103,11 +108,12 @@ export function useServiceWorker() {
 
     // Verificar cuando la app gana focus
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && registration) {
+      const reg = registrationRef.current;
+      if (document.visibilityState === 'visible' && reg) {
         console.log('👀 [SW] App visible, checking for updates...');
         try {
-          await registration.update();
-          checkForWaitingWorker(registration);
+          await reg.update();
+          checkForWaitingWorker(reg);
         } catch {
           // Ignore errors
         }
@@ -135,14 +141,14 @@ export function useServiceWorker() {
         clearInterval(checkIntervalRef.current);
       }
     };
-  }, [checkForWaitingWorker, registration]);
+  }, [checkForWaitingWorker]);
 
   /**
    * Aplicar actualización inmediatamente
    * Envía mensaje SKIP_WAITING al SW
    */
   const updateServiceWorker = useCallback(() => {
-    const waiting = registration?.waiting;
+    const waiting = (registrationRef.current ?? registration)?.waiting;
 
     if (!waiting) {
       console.warn('⚠️ [SW] No waiting worker to activate');

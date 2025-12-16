@@ -9,10 +9,8 @@ import {
   CheckCircle2,
   Image as ImageIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export default function NotificationsAdmin() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +23,6 @@ export default function NotificationsAdmin() {
     topic: 'all', // all | segments (future)
   });
 
-  // Preview state
-  const isPreview = true;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -39,16 +34,12 @@ export default function NotificationsAdmin() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Simple auth check header (in a real text this would be a real token)
-          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || 'parroquia-admin-2025',
         },
         body: JSON.stringify({
           title: form.title,
           body: form.body,
-          data: {
-            url: form.url,
-            image: form.image,
-          },
+          url: form.url,
+          image: form.image,
         }),
       });
 
