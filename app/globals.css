@@ -901,7 +901,7 @@ html {
   border-top: 1px solid var(--cal-border-subtle);
   touch-action: none;
   will-change: height, transform;
-  z-index: 9999;
+  z-index: 40; /* Below tab bar (z-50) */
   /* GPU acceleration for mobile */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
