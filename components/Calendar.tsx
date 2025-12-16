@@ -52,10 +52,12 @@ interface Event {
 // =============================================================================
 // CONSTANTS
 // =============================================================================
+const TAB_BAR_HEIGHT = 68; // Tab bar height in pixels
+
 const SNAP_HEIGHTS: Record<SnapPoint, number> = {
-  collapsed: 180,
-  half: 0.55,
-  full: 0.9,
+  collapsed: 160,
+  half: 0.45,
+  full: 0.75,
 };
 
 const VIEW_LABELS: Record<ViewMode, string> = {
@@ -535,22 +537,22 @@ function AgendaPanel({
 
   const isToday = selectedDate.isSame(dayjs(), 'day');
 
-  // Calculate actual height from snap point
+  // Calculate actual height from snap point (accounting for tab bar)
   const getSnapHeight = useCallback((snap: SnapPoint): number => {
     if (typeof window === 'undefined') return SNAP_HEIGHTS.collapsed;
-    const vh = window.innerHeight;
+    const availableHeight = window.innerHeight - TAB_BAR_HEIGHT;
     const value = SNAP_HEIGHTS[snap];
-    return typeof value === 'number' ? value : vh * value;
+    return typeof value === 'number' ? value : availableHeight * value;
   }, []);
 
   // Snap to nearest point
   const snapToNearest = useCallback(
     (height: number) => {
-      const vh = window.innerHeight;
+      const availableHeight = window.innerHeight - TAB_BAR_HEIGHT;
       const points: [SnapPoint, number][] = [
         ['collapsed', SNAP_HEIGHTS.collapsed],
-        ['half', vh * 0.55],
-        ['full', vh * 0.9],
+        ['half', availableHeight * SNAP_HEIGHTS.half],
+        ['full', availableHeight * SNAP_HEIGHTS.full],
       ];
 
       let closest: SnapPoint = 'collapsed';
@@ -584,10 +586,8 @@ function AgendaPanel({
   const handleDragMove = useCallback((clientY: number) => {
     if (!dragStartRef.current) return;
     const deltaY = dragStartRef.current.y - clientY;
-    const newHeight = Math.max(
-      100,
-      Math.min(window.innerHeight * 0.95, dragStartRef.current.height + deltaY)
-    );
+    const maxHeight = window.innerHeight - TAB_BAR_HEIGHT - 50; // Leave space for header
+    const newHeight = Math.max(100, Math.min(maxHeight, dragStartRef.current.height + deltaY));
     setDragHeight(newHeight);
   }, []);
 
@@ -1005,10 +1005,8 @@ export function CalendarComponent() {
     if (!date.isSame(currentMonth, 'month')) {
       setCurrentMonth(date);
     }
-    // Expand agenda when selecting a date
-    if (agendaSnap === 'collapsed') {
-      setAgendaSnap('half');
-    }
+    // Always expand agenda panel when selecting a date
+    setAgendaSnap('half');
   };
 
   const handleViewChange = (mode: ViewMode) => {

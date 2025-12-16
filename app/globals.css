@@ -874,19 +874,18 @@ html {
 
 /* Event Chip for detailed view */
 .cal-event-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: clamp(11px, 2.1vw, 13px);
-  font-weight: 600;
-  line-height: 1.15;
+  display: block;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
   border: 1px solid transparent;
+  text-transform: none;
 }
 
 /* Agenda Panel - positioned above tab bar */
