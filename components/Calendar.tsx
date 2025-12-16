@@ -8,10 +8,12 @@ import {
   Clock,
   Share2,
   Download,
-  Grid3X3,
   Loader2,
   RefreshCw,
   X,
+  List,
+  CalendarDays,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -24,14 +26,14 @@ import { useCalendarEvents } from '@/hooks/useCachedFetch';
 
 dayjs.locale('es');
 
-type ViewMode = 'week' | 'month';
+type ViewMode = 'week' | 'month' | 'agenda';
 
 type EventCategory = 'mass' | 'confession' | 'adoration' | 'meeting' | 'other';
 
 interface Event {
   id: string;
   title: string;
-  start: string; // ISO date string
+  start: string;
   end?: string;
   description?: string;
   location?: string;
@@ -54,37 +56,47 @@ function detectCategory(title: string): EventCategory {
 
 const CATEGORY_META: Record<
   EventCategory,
-  { label: string; accent: string; pill: string; dot: string }
+  { label: string; accent: string; pill: string; dot: string; bg: string; text: string }
 > = {
   mass: {
     label: 'Misa',
     accent: 'bg-blue-600',
-    pill: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-200',
+    pill: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
     dot: 'bg-blue-500',
+    bg: 'bg-blue-500/15 dark:bg-blue-500/25',
+    text: 'text-blue-700 dark:text-blue-300',
   },
   confession: {
     label: 'Confesión',
     accent: 'bg-violet-600',
-    pill: 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-200',
+    pill: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
     dot: 'bg-violet-500',
+    bg: 'bg-violet-500/15 dark:bg-violet-500/25',
+    text: 'text-violet-700 dark:text-violet-300',
   },
   adoration: {
     label: 'Adoración',
     accent: 'bg-amber-600',
-    pill: 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200',
+    pill: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
     dot: 'bg-amber-500',
+    bg: 'bg-amber-500/15 dark:bg-amber-500/25',
+    text: 'text-amber-700 dark:text-amber-300',
   },
   meeting: {
     label: 'Actividad',
     accent: 'bg-emerald-600',
-    pill: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200',
+    pill: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     dot: 'bg-emerald-500',
+    bg: 'bg-emerald-500/15 dark:bg-emerald-500/25',
+    text: 'text-emerald-700 dark:text-emerald-300',
   },
   other: {
     label: 'Evento',
     accent: 'bg-slate-500',
-    pill: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    pill: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
     dot: 'bg-slate-400',
+    bg: 'bg-slate-500/15 dark:bg-slate-500/25',
+    text: 'text-slate-700 dark:text-slate-300',
   },
 };
 
@@ -93,9 +105,26 @@ function formatEventTime(event: Event) {
   const start = dayjs(event.start);
   const end = event.end ? dayjs(event.end) : null;
   if (end && end.isValid() && !end.isSame(start, 'minute')) {
-    return `${start.format('HH:mm')}–${end.format('HH:mm')}`;
+    return `${start.format('HH:mm')} – ${end.format('HH:mm')}`;
   }
   return start.format('HH:mm');
+}
+
+function formatShortTime(event: Event) {
+  if (event.allDay) return 'Día';
+  return dayjs(event.start).format('HH:mm');
+}
+
+function getRelativeTime(event: Event): string | null {
+  const now = dayjs();
+  const start = dayjs(event.start);
+  const diffMins = start.diff(now, 'minute');
+
+  if (diffMins < 0) return null; // Ya pasó
+  if (diffMins < 60) return `En ${diffMins} min`;
+  if (diffMins < 120) return 'En 1 hora';
+  if (diffMins < 1440) return `En ${Math.floor(diffMins / 60)} horas`;
+  return null;
 }
 
 function escapeICSText(value: string) {
@@ -184,13 +213,19 @@ export function CalendarComponent() {
         end: cursorDate.endOf('month').endOf('week'),
       };
     }
+    if (viewMode === 'agenda') {
+      // Agenda: próximos 30 días
+      return {
+        start: dayjs().startOf('day'),
+        end: dayjs().add(30, 'day').endOf('day'),
+      };
+    }
     return {
       start: cursorDate.startOf('week'),
       end: cursorDate.endOf('week'),
     };
   }, [cursorDate, viewMode]);
 
-  // Usar hook con caché SWR - carga instantánea desde localStorage
   const {
     events,
     loading,
@@ -200,7 +235,7 @@ export function CalendarComponent() {
     refetch: loadEvents,
   } = useCalendarEvents(visibleRange.start.toDate(), visibleRange.end.toDate());
 
-  // Group events by date for rendering
+  // Group events by date
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, Event[]> = {};
 
@@ -216,6 +251,14 @@ export function CalendarComponent() {
     }
 
     return grouped;
+  }, [events]);
+
+  // Upcoming events for agenda view
+  const upcomingEvents = useMemo(() => {
+    const now = dayjs();
+    return events
+      .filter((e) => dayjs(e.start).isAfter(now.subtract(1, 'hour')))
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   }, [events]);
 
   const weekStart = useMemo(() => cursorDate.startOf('week'), [cursorDate]);
@@ -256,7 +299,6 @@ export function CalendarComponent() {
       setSelectedDate((d) => d.subtract(1, 'week'));
       return;
     }
-
     setCursorDate((d) => d.subtract(1, 'month'));
     setSelectedDate((d) => d.subtract(1, 'month'));
   };
@@ -268,7 +310,6 @@ export function CalendarComponent() {
       setSelectedDate((d) => d.add(1, 'week'));
       return;
     }
-
     setCursorDate((d) => d.add(1, 'month'));
     setSelectedDate((d) => d.add(1, 'month'));
   };
@@ -282,7 +323,7 @@ export function CalendarComponent() {
 
   const handleRefresh = () => {
     haptics.medium();
-    void loadEvents(true); // Force refresh
+    void loadEvents(true);
   };
 
   const handleShareEvent = async (event: Event) => {
@@ -297,11 +338,7 @@ export function CalendarComponent() {
 
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: event.title,
-          text,
-          url: window.location.href,
-        });
+        await navigator.share({ title: event.title, text, url: window.location.href });
         toast.success('Evento compartido');
       } catch (err) {
         console.error('Error sharing', err);
@@ -334,175 +371,232 @@ export function CalendarComponent() {
     setActiveEvent(null);
   };
 
-  // --- Render Helpers ---
-
+  // ============================================================
+  // RENDER: Week View
+  // ============================================================
   const renderWeekView = () => {
     return (
-      <div className="space-y-6">
-        {/* Date Strip (Week) */}
-        <div className="flex justify-between items-center bg-card-background rounded-2xl p-2 shadow-sm border border-card-border">
-          <button
-            onClick={handlePrev}
-            className="p-2 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
-            aria-label="Semana anterior"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+      <div className="space-y-4">
+        {/* Date Strip - Apple Calendar Style */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-1.5 shadow-sm border border-slate-200/60 dark:border-slate-700/50">
+          <div className="flex items-center">
+            <button
+              onClick={handlePrev}
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 active:scale-95 transition-all rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
 
-          <div className="flex gap-1 overflow-x-auto no-scrollbar flex-1 justify-center">
-            {weekDays.map((day) => {
-              const isSelected = day.isSame(selectedDate, 'day');
-              const isToday = day.isSame(dayjs(), 'day');
-              const dateKey = day.format('YYYY-MM-DD');
-              const count = eventsByDate[dateKey]?.length ?? 0;
-              const dotClass =
-                count > 0
-                  ? CATEGORY_META[detectCategory(eventsByDate[dateKey]?.[0]?.title || '')].dot
-                  : '';
+            <div className="flex flex-1 justify-center">
+              {weekDays.map((day) => {
+                const isSelected = day.isSame(selectedDate, 'day');
+                const isToday = day.isSame(dayjs(), 'day');
+                const dateKey = day.format('YYYY-MM-DD');
+                const dayEventsList = eventsByDate[dateKey] || [];
+                const count = dayEventsList.length;
+                const isPast = day.isBefore(dayjs(), 'day');
 
-              return (
-                <button
-                  key={day.toString()}
-                  onClick={() => handleDateSelect(day)}
-                  className={cn(
-                    'flex flex-col items-center justify-center min-w-[46px] h-[64px] rounded-2xl transition-all',
-                    isSelected
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800',
-                    isToday &&
-                      !isSelected &&
-                      'text-blue-600 font-bold bg-blue-50 dark:bg-blue-900/20'
-                  )}
-                >
-                  <span className="text-[10px] uppercase font-semibold tracking-wide mb-0.5">
-                    {day.format('ddd')}
-                  </span>
-                  <span
+                return (
+                  <button
+                    key={day.toString()}
+                    onClick={() => handleDateSelect(day)}
                     className={cn(
-                      'text-lg font-bold leading-none',
-                      isSelected ? 'text-white' : 'text-slate-900 dark:text-white'
+                      'flex flex-col items-center justify-center min-w-[44px] h-[62px] rounded-xl transition-all mx-0.5',
+                      isSelected
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                        : isPast
+                          ? 'text-slate-300 dark:text-slate-600'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50',
+                      isToday && !isSelected && 'ring-2 ring-blue-500/50 ring-inset'
                     )}
                   >
-                    {day.format('D')}
-                  </span>
-                  <span
-                    className={cn(
-                      'mt-1 h-1.5 w-1.5 rounded-full transition-opacity',
-                      isSelected ? 'bg-white/90' : count > 0 ? dotClass : 'bg-transparent'
-                    )}
-                    aria-hidden="true"
-                  />
-                </button>
-              );
-            })}
-          </div>
+                    <span
+                      className={cn(
+                        'text-[10px] uppercase font-semibold tracking-wide',
+                        isSelected ? 'text-blue-100' : ''
+                      )}
+                    >
+                      {day.format('dd')}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-lg font-bold leading-none mt-0.5',
+                        isSelected ? 'text-white' : isToday ? 'text-blue-600' : ''
+                      )}
+                    >
+                      {day.format('D')}
+                    </span>
+                    {/* Event indicators */}
+                    <div className="flex gap-0.5 mt-1 h-1.5">
+                      {count > 0 && count <= 3 ? (
+                        dayEventsList
+                          .slice(0, 3)
+                          .map((ev, i) => (
+                            <span
+                              key={i}
+                              className={cn(
+                                'w-1.5 h-1.5 rounded-full',
+                                isSelected
+                                  ? 'bg-white/80'
+                                  : CATEGORY_META[detectCategory(ev.title)].dot
+                              )}
+                            />
+                          ))
+                      ) : count > 3 ? (
+                        <>
+                          <span
+                            className={cn(
+                              'w-1.5 h-1.5 rounded-full',
+                              isSelected ? 'bg-white/80' : 'bg-blue-500'
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'text-[8px] font-bold leading-none',
+                              isSelected ? 'text-white/80' : 'text-slate-400'
+                            )}
+                          >
+                            +{count - 1}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-          <button
-            onClick={handleNext}
-            className="p-2 text-slate-400 hover:text-slate-600 active:scale-95 transition-transform"
-            aria-label="Semana siguiente"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+            <button
+              onClick={handleNext}
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 active:scale-95 transition-all rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/50"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Agenda semanal */}
+        {/* Events List */}
         {!loading && !error && events.length === 0 ? (
           <EmptyCalendar onRefresh={handleRefresh} />
         ) : (
-          <div className="space-y-6 pb-20">
+          <div className="space-y-5 pb-20">
             {weekDays.map((day) => {
               const dateKey = day.format('YYYY-MM-DD');
               const dayEvents = eventsByDate[dateKey] || [];
-              const isSelected = day.isSame(selectedDate, 'day');
               const isToday = day.isSame(dayjs(), 'day');
               const isPast = day.isBefore(dayjs(), 'day');
 
-              // No mostrar días pasados en la agenda (solo en el strip de fechas)
               if (isPast) return null;
-
-              // No mostrar días futuros sin eventos (a menos que esté seleccionado o sea hoy)
-              if (dayEvents.length === 0 && !isSelected && !isToday) return null;
+              if (dayEvents.length === 0 && !isToday) return null;
 
               return (
-                <section key={dateKey} className="space-y-3">
-                  <div className="flex items-baseline justify-between px-1">
-                    <h3 className="text-base font-extrabold text-foreground tracking-tight">
-                      {isToday ? 'Hoy' : capitalize(day.format('dddd'))}
-                      <span className="ml-2 text-sm font-semibold text-slate-500">
-                        {day.format('D [de] MMMM')}
+                <section key={dateKey}>
+                  {/* Day Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={cn(
+                        'flex flex-col items-center justify-center w-12 h-12 rounded-xl',
+                        isToday
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      )}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        {day.format('MMM')}
                       </span>
-                    </h3>
-                    {dayEvents.length > 0 && (
-                      <span className="text-xs font-semibold text-slate-500">
-                        {dayEvents.length} {dayEvents.length === 1 ? 'evento' : 'eventos'}
-                      </span>
-                    )}
+                      <span className="text-lg font-black leading-none">{day.format('D')}</span>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">
+                        {isToday ? 'Hoy' : capitalize(day.format('dddd'))}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {dayEvents.length > 0
+                          ? `${dayEvents.length} ${dayEvents.length === 1 ? 'evento' : 'eventos'}`
+                          : 'Sin eventos'}
+                      </p>
+                    </div>
                   </div>
 
+                  {/* Events */}
                   {dayEvents.length === 0 ? (
-                    <Card
-                      variant="flat"
-                      className="py-6 flex items-center justify-center text-center text-slate-400"
-                    >
-                      <p className="text-sm font-medium">Sin eventos</p>
-                    </Card>
+                    <div className="ml-15 pl-4 border-l-2 border-dashed border-slate-200 dark:border-slate-700 py-4">
+                      <p className="text-sm text-slate-400 italic">No hay eventos programados</p>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
-                      {dayEvents.map((event, idx) => {
-                        const category = detectCategory(event.title || '');
-                        const meta = CATEGORY_META[category];
+                    <div className="space-y-2">
+                      {dayEvents.map((event) => {
+                        const category = detectCategory(event.title);
+                        const catMeta = CATEGORY_META[category];
+                        const relativeTime = getRelativeTime(event);
 
                         return (
-                          <Card
+                          <button
                             key={event.id}
-                            variant="flat"
-                            padding="none"
-                            className="overflow-hidden stagger-item"
-                            style={{ animationDelay: `${0.05 + idx * 0.05}s` }}
+                            onClick={() => openEvent(event)}
+                            className={cn(
+                              'w-full text-left rounded-xl p-3 transition-all active:scale-[0.99]',
+                              'bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/50',
+                              'hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600'
+                            )}
                           >
-                            <button
-                              onClick={() => openEvent(event)}
-                              className="w-full text-left p-4 relative active:scale-[0.99] transition-transform touch-feedback"
-                            >
-                              <div
-                                className={cn(
-                                  'absolute left-0 top-3 bottom-3 w-1 rounded-full',
-                                  meta.accent
+                            <div className="flex gap-3">
+                              {/* Time Column */}
+                              <div className="flex flex-col items-center w-14 shrink-0">
+                                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                  {formatShortTime(event)}
+                                </span>
+                                {event.end && !event.allDay && (
+                                  <span className="text-[10px] text-slate-400">
+                                    {dayjs(event.end).format('HH:mm')}
+                                  </span>
                                 )}
+                              </div>
+
+                              {/* Color Bar */}
+                              <div
+                                className={cn('w-1 rounded-full self-stretch', catMeta.accent)}
                               />
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                  <p className="text-base font-bold text-foreground leading-snug">
+
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-semibold text-foreground leading-tight line-clamp-2">
                                     {event.title}
                                   </p>
-                                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
-                                    <span className="inline-flex items-center gap-1.5 font-semibold">
-                                      <Clock className="w-3.5 h-3.5" />
-                                      {formatEventTime(event)}
+                                  {relativeTime && (
+                                    <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                      {relativeTime}
                                     </span>
-                                    {event.location && (
-                                      <span className="inline-flex items-center gap-1.5 min-w-0">
-                                        <MapPin className="w-3.5 h-3.5" />
-                                        <span className="truncate max-w-[220px]">
-                                          {event.location}
-                                        </span>
-                                      </span>
-                                    )}
-                                    <span
-                                      className={cn(
-                                        'inline-flex items-center px-2 py-0.5 rounded-full font-semibold',
-                                        meta.pill
-                                      )}
-                                    >
-                                      {meta.label}
-                                    </span>
-                                  </div>
+                                  )}
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-slate-300 mt-1 shrink-0" />
+
+                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                  {event.location && (
+                                    <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                                      <MapPin className="w-3 h-3" />
+                                      <span className="truncate max-w-[150px]">
+                                        {event.location}
+                                      </span>
+                                    </span>
+                                  )}
+                                  <span
+                                    className={cn(
+                                      'text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                                      catMeta.bg,
+                                      catMeta.text
+                                    )}
+                                  >
+                                    {catMeta.label}
+                                  </span>
+                                </div>
                               </div>
-                            </button>
-                          </Card>
+
+                              <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 mt-1" />
+                            </div>
+                          </button>
                         );
                       })}
                     </div>
@@ -516,83 +610,129 @@ export function CalendarComponent() {
     );
   };
 
+  // ============================================================
+  // RENDER: Month View - Google Calendar Style
+  // ============================================================
   const renderMonthView = () => {
-    const weekLabels = Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day').format('dd'));
+    const weekLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
     return (
-      <div className="space-y-6 pb-20">
-        <Card variant="flat" padding="sm" className="overflow-hidden">
-          <div className="grid grid-cols-7 gap-1.5 px-1 pb-2">
-            {weekLabels.map((label) => (
+      <div className="space-y-4 pb-20">
+        {/* Month Grid */}
+        <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-3 shadow-sm border border-slate-200/60 dark:border-slate-700/50">
+          {/* Week day headers */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {weekLabels.map((label, i) => (
               <div
-                key={label}
-                className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center"
+                key={label + i}
+                className={cn(
+                  'text-[11px] font-bold text-center py-1',
+                  i >= 5 ? 'text-slate-400' : 'text-slate-500'
+                )}
               >
                 {label}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5">
+          {/* Days grid */}
+          <div className="grid grid-cols-7 gap-1">
             {monthDays.map((day) => {
               const isInMonth = day.isSame(cursorDate, 'month');
               const isSelected = day.isSame(selectedDate, 'day');
               const isToday = day.isSame(dayjs(), 'day');
               const dateKey = day.format('YYYY-MM-DD');
-              const count = eventsByDate[dateKey]?.length ?? 0;
+              const dayEventsList = eventsByDate[dateKey] || [];
+              const count = dayEventsList.length;
 
               return (
                 <button
                   key={dateKey}
                   onClick={() => handleDateSelect(day)}
                   className={cn(
-                    'h-11 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95',
+                    'relative flex flex-col items-center p-1 rounded-lg transition-all min-h-[52px]',
                     isSelected
                       ? 'bg-blue-600 text-white shadow-md'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/60',
-                    !isInMonth && !isSelected && 'text-slate-300 dark:text-slate-600',
-                    isToday &&
-                      !isSelected &&
-                      'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/20'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-700/50',
+                    !isInMonth && !isSelected && 'opacity-30'
                   )}
-                  aria-label={day.format('D [de] MMMM YYYY')}
                 >
-                  <span className={cn('text-sm font-extrabold', isSelected ? 'text-white' : '')}>
-                    {day.format('D')}
-                  </span>
+                  {/* Day number */}
                   <span
                     className={cn(
-                      'mt-1 h-1.5 w-1.5 rounded-full transition-opacity',
-                      isSelected ? 'bg-white/90' : count > 0 ? 'bg-blue-500' : 'bg-transparent',
-                      !isInMonth && count > 0 && !isSelected && 'bg-slate-300 dark:bg-slate-600'
+                      'text-sm font-bold',
+                      isSelected ? 'text-white' : isToday ? 'text-blue-600' : 'text-foreground',
+                      isToday &&
+                        !isSelected &&
+                        'bg-blue-100 dark:bg-blue-900/50 rounded-full w-6 h-6 flex items-center justify-center'
                     )}
-                    aria-hidden="true"
-                  />
+                  >
+                    {day.format('D')}
+                  </span>
+
+                  {/* Mini events */}
+                  <div className="flex flex-col gap-0.5 mt-1 w-full px-0.5">
+                    {dayEventsList.slice(0, 2).map((ev) => {
+                      const cat = detectCategory(ev.title);
+                      return (
+                        <div
+                          key={ev.id}
+                          className={cn(
+                            'text-[8px] font-medium truncate px-1 py-0.5 rounded',
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : CATEGORY_META[cat].bg + ' ' + CATEGORY_META[cat].text
+                          )}
+                        >
+                          {formatShortTime(ev)}
+                        </div>
+                      );
+                    })}
+                    {count > 2 && (
+                      <span
+                        className={cn(
+                          'text-[8px] font-bold text-center',
+                          isSelected ? 'text-white/70' : 'text-slate-400'
+                        )}
+                      >
+                        +{count - 2}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
-        </Card>
+        </div>
 
-        {/* Eventos del día seleccionado */}
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between px-1">
-            <h3 className="text-base font-extrabold text-foreground tracking-tight">
-              {selectedDate.isSame(dayjs(), 'day')
-                ? 'Hoy'
-                : capitalize(selectedDate.format('dddd'))}
-              <span className="ml-2 text-sm font-semibold text-slate-500">
-                {selectedDate.format('D [de] MMMM')}
+        {/* Selected Day Events */}
+        <div>
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className={cn(
+                'flex flex-col items-center justify-center w-12 h-12 rounded-xl',
+                selectedDate.isSame(dayjs(), 'day')
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              )}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                {selectedDate.format('MMM')}
               </span>
-            </h3>
-            {(eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0) > 0 && (
-              <span className="text-xs font-semibold text-slate-500">
-                {eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0}{' '}
-                {(eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0) === 1
-                  ? 'evento'
-                  : 'eventos'}
-              </span>
-            )}
+              <span className="text-lg font-black leading-none">{selectedDate.format('D')}</span>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">
+                {selectedDate.isSame(dayjs(), 'day')
+                  ? 'Hoy'
+                  : capitalize(selectedDate.format('dddd'))}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {(eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length ?? 0) > 0
+                  ? `${eventsByDate[selectedDate.format('YYYY-MM-DD')]?.length} eventos`
+                  : 'Sin eventos'}
+              </p>
+            </div>
           </div>
 
           {(() => {
@@ -601,64 +741,44 @@ export function CalendarComponent() {
 
             if (dailyEvents.length === 0) {
               return (
-                <Card
-                  variant="flat"
-                  className="py-8 flex flex-col items-center text-center text-slate-400"
-                >
-                  <Grid3X3 className="w-10 h-10 mb-2 opacity-20" />
-                  <p className="font-medium">No hay eventos ese día</p>
-                </Card>
+                <div className="text-center py-8 text-slate-400">
+                  <CalendarIcon className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                  <p className="font-medium">No hay eventos este día</p>
+                </div>
               );
             }
 
             return (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {dailyEvents.map((event) => {
-                  const category = detectCategory(event.title || '');
-                  const meta = CATEGORY_META[category];
+                  const category = detectCategory(event.title);
+                  const catMeta = CATEGORY_META[category];
 
                   return (
-                    <Card key={event.id} variant="flat" padding="none" className="overflow-hidden">
-                      <button
-                        onClick={() => openEvent(event)}
-                        className="w-full text-left p-4 relative active:scale-[0.99] transition-transform"
-                      >
-                        <div
-                          className={cn(
-                            'absolute left-0 top-3 bottom-3 w-1 rounded-full',
-                            meta.accent
-                          )}
-                        />
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-base font-bold text-foreground leading-snug">
-                              {event.title}
-                            </p>
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
-                              <span className="inline-flex items-center gap-1.5 font-semibold">
-                                <Clock className="w-3.5 h-3.5" />
-                                {formatEventTime(event)}
-                              </span>
-                              {event.location && (
-                                <span className="inline-flex items-center gap-1.5 min-w-0">
-                                  <MapPin className="w-3.5 h-3.5" />
-                                  <span className="truncate max-w-[220px]">{event.location}</span>
-                                </span>
-                              )}
-                              <span
-                                className={cn(
-                                  'inline-flex items-center px-2 py-0.5 rounded-full font-semibold',
-                                  meta.pill
-                                )}
-                              >
-                                {meta.label}
-                              </span>
-                            </div>
-                          </div>
-                          <ChevronRight className="w-5 h-5 text-slate-300 mt-1 shrink-0" />
+                    <button
+                      key={event.id}
+                      onClick={() => openEvent(event)}
+                      className="w-full text-left rounded-xl p-3 bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/50 hover:shadow-md transition-all active:scale-[0.99]"
+                    >
+                      <div className="flex gap-3">
+                        <div className="flex flex-col items-center w-14 shrink-0">
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            {formatShortTime(event)}
+                          </span>
                         </div>
-                      </button>
-                    </Card>
+                        <div className={cn('w-1 rounded-full self-stretch', catMeta.accent)} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground">{event.title}</p>
+                          {event.location && (
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              {event.location}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -669,11 +789,131 @@ export function CalendarComponent() {
     );
   };
 
+  // ============================================================
+  // RENDER: Agenda View - List Style
+  // ============================================================
+  const renderAgendaView = () => {
+    // Group by date
+    const groupedEvents: Record<string, Event[]> = {};
+    for (const event of upcomingEvents) {
+      const dateKey = dayjs(event.start).format('YYYY-MM-DD');
+      (groupedEvents[dateKey] ||= []).push(event);
+    }
+
+    const sortedDates = Object.keys(groupedEvents).sort();
+
+    return (
+      <div className="space-y-4 pb-20">
+        {sortedDates.length === 0 ? (
+          <EmptyCalendar onRefresh={handleRefresh} />
+        ) : (
+          sortedDates.map((dateKey) => {
+            const day = dayjs(dateKey);
+            const isToday = day.isSame(dayjs(), 'day');
+            const isTomorrow = day.isSame(dayjs().add(1, 'day'), 'day');
+            const dayEvents = groupedEvents[dateKey] || [];
+
+            return (
+              <section key={dateKey}>
+                {/* Date Header */}
+                <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 -mx-6 px-6">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        'w-10 h-10 rounded-lg flex flex-col items-center justify-center',
+                        isToday
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      )}
+                    >
+                      <span className="text-[9px] font-bold uppercase">{day.format('MMM')}</span>
+                      <span className="text-base font-black leading-none">{day.format('D')}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">
+                        {isToday ? 'Hoy' : isTomorrow ? 'Mañana' : capitalize(day.format('dddd'))}
+                      </p>
+                      <p className="text-xs text-slate-500">{day.format('D [de] MMMM')}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Events */}
+                <div className="space-y-2 mt-2">
+                  {dayEvents.map((event) => {
+                    const category = detectCategory(event.title);
+                    const catMeta = CATEGORY_META[category];
+                    const relativeTime = isToday ? getRelativeTime(event) : null;
+
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => openEvent(event)}
+                        className="w-full text-left rounded-xl p-3 bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/50 hover:shadow-md transition-all active:scale-[0.99]"
+                      >
+                        <div className="flex gap-3">
+                          <div className="flex flex-col items-center w-12 shrink-0">
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                              {formatShortTime(event)}
+                            </span>
+                            {event.end && !event.allDay && (
+                              <span className="text-[10px] text-slate-400">
+                                {dayjs(event.end).format('HH:mm')}
+                              </span>
+                            )}
+                          </div>
+                          <div className={cn('w-1 rounded-full self-stretch', catMeta.accent)} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold text-foreground line-clamp-1">
+                                {event.title}
+                              </p>
+                              {relativeTime && (
+                                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                                  {relativeTime}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {event.location && (
+                                <span className="text-xs text-slate-500 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="truncate max-w-[120px]">{event.location}</span>
+                                </span>
+                              )}
+                              <span
+                                className={cn(
+                                  'text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                                  catMeta.bg,
+                                  catMeta.text
+                                )}
+                              >
+                                {catMeta.label}
+                              </span>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })
+        )}
+      </div>
+    );
+  };
+
+  // ============================================================
+  // MAIN RENDER
+  // ============================================================
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
-      {/* Premium Header */}
+      {/* Header */}
       <div
-        className="px-6 pt-12 pb-4 flex flex-col sticky top-0 z-10"
+        className="px-6 pt-12 pb-4 flex flex-col sticky top-0 z-20"
         style={{
           background: 'var(--glass-background)',
           backdropFilter: 'blur(20px)',
@@ -681,59 +921,66 @@ export function CalendarComponent() {
           borderBottom: '1px solid var(--glass-border)',
         }}
       >
-        <div className="flex justify-between items-end gap-4">
+        <div className="flex justify-between items-start gap-4">
           <div className="min-w-0">
-            <h1 className="text-4xl font-black text-foreground tracking-tight">Calendario</h1>
-            <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
-              {viewMode === 'month'
-                ? capitalize(cursorDate.format('MMMM YYYY'))
-                : `${weekStart.format('D MMM')} – ${weekEnd.format('D MMM YYYY')}`}
+            <h1 className="text-3xl font-black text-foreground tracking-tight">
+              {viewMode === 'agenda'
+                ? 'Próximos'
+                : viewMode === 'month'
+                  ? capitalize(cursorDate.format('MMMM'))
+                  : `${weekStart.format('D')} – ${weekEnd.format('D MMM')}`}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+              {viewMode === 'agenda'
+                ? 'Próximos 30 días'
+                : viewMode === 'month'
+                  ? cursorDate.format('YYYY')
+                  : cursorDate.format('MMMM YYYY')}
             </p>
-            {meta?.lastUpdate && (
-              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                {meta.cached ? 'En caché' : 'Actualizado'} ·{' '}
-                {dayjs(meta.lastUpdate).format('DD MMM HH:mm')}
-              </p>
-            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={handleRefresh}
               disabled={loading || isRevalidating}
-              className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95 disabled:opacity-50"
+              className="p-2.5 rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95 disabled:opacity-50"
               aria-label="Actualizar"
             >
               <RefreshCw className={cn('w-5 h-5', (loading || isRevalidating) && 'animate-spin')} />
             </button>
-            <button
-              onClick={handleToday}
-              className="px-4 py-2 rounded-2xl text-xs font-bold bg-[var(--surface-primary)] text-[var(--tab-active-text)] hover:bg-[var(--surface-primary-strong)] transition-all active:scale-95"
-            >
-              Hoy
-            </button>
+            {viewMode !== 'agenda' && (
+              <button
+                onClick={handleToday}
+                className="px-3 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all active:scale-95"
+              >
+                Hoy
+              </button>
+            )}
           </div>
         </div>
 
-        {/* View Toggle - Segmented Control */}
+        {/* View Toggle */}
         <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handlePrev}
-              className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95"
-              aria-label={viewMode === 'week' ? 'Semana anterior' : 'Mes anterior'}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95"
-              aria-label={viewMode === 'week' ? 'Semana siguiente' : 'Mes siguiente'}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          {viewMode !== 'agenda' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handlePrev}
+                className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleNext}
+                className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
+          {viewMode === 'agenda' && <div />}
+
+          {/* View Switcher */}
           <div className="flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
             <button
               onClick={() => {
@@ -741,13 +988,14 @@ export function CalendarComponent() {
                 haptics.light();
               }}
               className={cn(
-                'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                'p-2 rounded-lg transition-all',
                 viewMode === 'week'
-                  ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
               )}
+              title="Vista semanal"
             >
-              Semana
+              <CalendarDays className="w-4 h-4" />
             </button>
             <button
               onClick={() => {
@@ -755,18 +1003,35 @@ export function CalendarComponent() {
                 haptics.light();
               }}
               className={cn(
-                'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                'p-2 rounded-lg transition-all',
                 viewMode === 'month'
-                  ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
               )}
+              title="Vista mensual"
             >
-              Mes
+              <CalendarIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('agenda');
+                haptics.light();
+              }}
+              className={cn(
+                'p-2 rounded-lg transition-all',
+                viewMode === 'agenda'
+                  ? 'bg-white dark:bg-slate-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              )}
+              title="Vista agenda"
+            >
+              <List className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
+      {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 pb-32">
         {error ? (
           <ErrorState onRetry={handleRefresh} />
@@ -776,8 +1041,10 @@ export function CalendarComponent() {
           </div>
         ) : viewMode === 'week' ? (
           renderWeekView()
-        ) : (
+        ) : viewMode === 'month' ? (
           renderMonthView()
+        ) : (
+          renderAgendaView()
         )}
       </div>
 
@@ -796,12 +1063,10 @@ export function CalendarComponent() {
             className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-[28px] shadow-2xl animate-slide-up"
             style={{ maxHeight: '85vh' }}
           >
-            {/* Drag Handle */}
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
             </div>
 
-            {/* Close Button */}
             <button
               onClick={closeEvent}
               className="absolute top-3 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
@@ -810,7 +1075,6 @@ export function CalendarComponent() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Content - Scrollable */}
             <div
               className="px-6 pb-8 overflow-y-auto"
               style={{
@@ -819,86 +1083,78 @@ export function CalendarComponent() {
               }}
             >
               <div className="space-y-5">
-                {/* Title & Time */}
-                <div>
-                  <h2 className="text-2xl font-black text-foreground leading-tight pr-8">
-                    {activeEvent.title}
-                  </h2>
-                  <p className="mt-2 text-base text-slate-500 dark:text-slate-400 font-medium">
-                    {capitalize(dayjs(activeEvent.start).format('dddd'))},{' '}
-                    {dayjs(activeEvent.start).format('D [de] MMMM [de] YYYY')}
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {formatEventTime(activeEvent)}
-                  </p>
-                </div>
-
-                {/* Location & Description */}
-                {(activeEvent.location || activeEvent.description) && (
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 space-y-4">
-                    {activeEvent.location && (
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                          <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                            Ubicación
-                          </p>
-                          <p className="text-base text-foreground font-medium mt-0.5">
-                            {activeEvent.location}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {activeEvent.description && (
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-                          <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                            Descripción
-                          </p>
-                          <p className="text-base text-slate-700 dark:text-slate-200 whitespace-pre-line mt-0.5">
-                            {activeEvent.description}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Category Badge */}
+                {/* Category color header */}
                 {(() => {
-                  const category = detectCategory(activeEvent.title || '');
-                  const categoryMeta = CATEGORY_META[category];
+                  const category = detectCategory(activeEvent.title);
+                  const catMeta = CATEGORY_META[category];
                   return (
-                    <div className="flex items-center gap-2">
+                    <div className={cn('rounded-xl p-4', catMeta.bg)}>
                       <span
-                        className={cn(
-                          'px-3 py-1.5 rounded-full text-sm font-bold',
-                          categoryMeta.pill
-                        )}
+                        className={cn('text-xs font-bold uppercase tracking-wider', catMeta.text)}
                       >
-                        {categoryMeta.label}
+                        {catMeta.label}
                       </span>
+                      <h2 className="text-xl font-black text-foreground leading-tight mt-1">
+                        {activeEvent.title}
+                      </h2>
                     </div>
                   );
                 })()}
 
-                {/* Action Buttons */}
+                {/* Date & Time */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {capitalize(dayjs(activeEvent.start).format('dddd, D [de] MMMM'))}
+                    </p>
+                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                      {formatEventTime(activeEvent)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Location */}
+                {activeEvent.location && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                      <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                        Ubicación
+                      </p>
+                      <p className="text-sm font-medium text-foreground">{activeEvent.location}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {activeEvent.description && (
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                      Descripción
+                    </p>
+                    <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line">
+                      {activeEvent.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Actions */}
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => void handleShareEvent(activeEvent)}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-base hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-[0.98]"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors active:scale-[0.98]"
                   >
                     <Share2 className="w-5 h-5" />
                     Compartir
                   </button>
                   <button
                     onClick={() => downloadICS(activeEvent)}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-700 transition-colors active:scale-[0.98]"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors active:scale-[0.98]"
                   >
                     <Download className="w-5 h-5" />
                     Añadir
@@ -913,5 +1169,4 @@ export function CalendarComponent() {
   );
 }
 
-// Default export is needed for dynamic imports in page.tsx
 export default CalendarComponent;
