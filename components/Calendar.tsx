@@ -55,9 +55,9 @@ interface Event {
 const TAB_BAR_HEIGHT = 56; // Tab bar height in pixels
 
 const SNAP_HEIGHTS: Record<SnapPoint, number> = {
-  collapsed: 180,
-  half: 0.5,
-  full: 0.8,
+  collapsed: 145,
+  half: 0.45,
+  full: 0.75,
 };
 
 const VIEW_LABELS: Record<ViewMode, string> = {
@@ -687,16 +687,14 @@ function AgendaPanel({
         style={{ height: 'calc(100% - 70px)' }}
       >
         {events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-[var(--cal-text-tertiary)]">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--cal-surface-secondary)] flex items-center justify-center mb-3">
-              <CalendarIcon className="w-7 h-7" />
-            </div>
-            <p className="text-[15px] font-medium">Sin eventos</p>
-            <p className="text-[13px] mt-0.5">No hay actividades programadas</p>
+          <div className="flex flex-col items-center justify-center py-6 text-[var(--cal-text-tertiary)]">
+            <CalendarIcon className="w-8 h-8 mb-2 opacity-50" />
+            <p className="text-[14px]">Sin eventos</p>
           </div>
         ) : (
           <div className="p-3 space-y-2">
-            {events.map((event) => (
+            {/* Show only 1 event when collapsed, all events otherwise */}
+            {(snapPoint === 'collapsed' ? events.slice(0, 1) : events).map((event) => (
               <EventCard
                 key={event.id}
                 event={event}
@@ -706,6 +704,15 @@ function AgendaPanel({
                 }}
               />
             ))}
+            {/* Show expand hint when collapsed and more events exist */}
+            {snapPoint === 'collapsed' && events.length > 1 && (
+              <button
+                onClick={() => onSnapChange('half')}
+                className="w-full py-2 text-[13px] text-[var(--cal-primary)] font-medium"
+              >
+                +{events.length - 1} evento{events.length > 2 ? 's' : ''} más · Desliza para ver
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1006,8 +1013,7 @@ export function CalendarComponent() {
     if (!date.isSame(currentMonth, 'month')) {
       setCurrentMonth(date);
     }
-    // Always expand agenda panel when selecting a date
-    setAgendaSnap('half');
+    // Keep panel collapsed - user can expand manually by dragging
   };
 
   const handleViewChange = (mode: ViewMode) => {
