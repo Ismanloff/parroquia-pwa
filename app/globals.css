@@ -900,8 +900,13 @@ html {
   box-shadow: var(--cal-shadow-panel);
   border-top: 1px solid var(--cal-border-subtle);
   touch-action: none;
-  will-change: height;
-  z-index: 40;
+  will-change: height, transform;
+  z-index: 9999;
+  /* GPU acceleration for mobile */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .cal-agenda-handle {

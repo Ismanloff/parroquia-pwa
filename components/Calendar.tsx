@@ -9,6 +9,7 @@ import {
   type TouchEvent as ReactTouchEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -1112,19 +1113,22 @@ export function CalendarComponent() {
         </div>
       )}
 
-      {/* Draggable Agenda Panel - Fixed at bottom for month views */}
-      {viewMode !== 'agenda' && (
-        <AgendaPanel
-          selectedDate={selectedDate}
-          events={selectedEvents}
-          onEventTap={(e) => {
-            haptics.medium();
-            setActiveEvent(e);
-          }}
-          snapPoint={agendaSnap}
-          onSnapChange={setAgendaSnap}
-        />
-      )}
+      {/* Draggable Agenda Panel - Rendered via Portal to escape overflow:hidden */}
+      {viewMode !== 'agenda' &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <AgendaPanel
+            selectedDate={selectedDate}
+            events={selectedEvents}
+            onEventTap={(e) => {
+              haptics.medium();
+              setActiveEvent(e);
+            }}
+            snapPoint={agendaSnap}
+            onSnapChange={setAgendaSnap}
+          />,
+          document.body
+        )}
 
       {/* Tab bar spacer */}
       <div className="h-16 shrink-0 bg-[var(--cal-bg)]" />
