@@ -213,7 +213,10 @@ function CalendarHeader({
           <ChevronLeft className="w-5 h-5 text-[var(--cal-text-secondary)]" />
         </button>
 
-        <h1 className="text-[20px] font-semibold text-[var(--cal-text-primary)] min-w-[160px] text-center tracking-tight">
+        <h1
+          className="font-semibold text-[var(--cal-text-primary)] min-w-[160px] text-center tracking-tight"
+          style={{ fontSize: 'clamp(20px, 3.6vw, 26px)' }}
+        >
           {capitalize(currentMonth.format('MMMM YYYY'))}
         </h1>
 
@@ -370,11 +373,12 @@ function DayCellDetailed({
     >
       <span
         className={cn(
-          'w-6 h-6 flex items-center justify-center rounded-full text-[13px] font-medium mb-1 self-end',
+          'w-7 h-7 flex items-center justify-center rounded-full font-medium mb-1 self-end',
           isToday && !isSelected && 'bg-[var(--cal-today)] text-white',
           isSelected && 'bg-[var(--cal-primary)] text-white',
           !isToday && !isSelected && 'text-[var(--cal-text-primary)]'
         )}
+        style={{ fontSize: 'clamp(14px, 2.5vw, 16px)' }}
       >
         {day.format('D')}
       </span>
@@ -475,11 +479,17 @@ function EventCard({
       <div className={cn('cal-event-indicator self-stretch', CATEGORY_CLASSES[category].dot)} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-medium text-[var(--cal-text-primary)] leading-snug truncate">
+        <p
+          className="font-semibold text-[var(--cal-text-primary)] leading-snug truncate"
+          style={{ fontSize: 'clamp(16px, 2.6vw, 18px)' }}
+        >
           {event.title}
         </p>
 
-        <div className="flex items-center gap-2 mt-1 text-[13px] text-[var(--cal-text-secondary)]">
+        <div
+          className="flex items-center gap-2 mt-1 text-[var(--cal-text-secondary)]"
+          style={{ fontSize: 'clamp(13px, 2.2vw, 15px)' }}
+        >
           <Clock className="w-3.5 h-3.5" />
           <span>
             {showDate && `${capitalize(dayjs(event.start).format('ddd D'))} · `}
@@ -488,7 +498,10 @@ function EventCard({
         </div>
 
         {event.location && (
-          <div className="flex items-center gap-2 mt-0.5 text-[13px] text-[var(--cal-text-secondary)]">
+          <div
+            className="flex items-center gap-2 mt-0.5 text-[var(--cal-text-secondary)]"
+            style={{ fontSize: 'clamp(13px, 2.2vw, 15px)' }}
+          >
             <MapPin className="w-3.5 h-3.5" />
             <span className="truncate">{event.location}</span>
           </div>
@@ -655,7 +668,10 @@ function AgendaPanel({
 
       {/* Header */}
       <div className="px-4 py-2 border-b border-[var(--cal-border-subtle)]">
-        <h2 className="text-[15px] font-semibold text-[var(--cal-text-primary)]">
+        <h2
+          className="font-semibold text-[var(--cal-text-primary)]"
+          style={{ fontSize: 'clamp(16px, 2.8vw, 18px)' }}
+        >
           {isToday ? 'Hoy' : capitalize(selectedDate.format('dddd'))}
           <span className="font-normal text-[var(--cal-text-secondary)] ml-1.5">
             {selectedDate.format('D [de] MMMM')}
@@ -748,8 +764,11 @@ function AgendaView({
         return (
           <div key={date.format('YYYY-MM-DD')}>
             {/* Date Header */}
-            <div className="sticky top-0 z-10 px-4 py-2 bg-[var(--cal-bg)]/95 backdrop-blur-sm border-b border-[var(--cal-border-subtle)]">
-              <h3 className="text-[13px] font-semibold text-[var(--cal-text-secondary)] uppercase tracking-wide">
+            <div className="sticky top-0 z-10 px-4 py-2.5 bg-[var(--cal-bg)]/95 backdrop-blur-sm border-b border-[var(--cal-border-subtle)]">
+              <h3
+                className="font-semibold text-[var(--cal-text-secondary)] uppercase tracking-wide"
+                style={{ fontSize: 'clamp(13px, 2.2vw, 15px)' }}
+              >
                 {isToday ? (
                   <span className="text-[var(--cal-today)]">Hoy</span>
                 ) : isTomorrow ? (
