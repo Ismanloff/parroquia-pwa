@@ -12,6 +12,7 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   MapPin,
   Clock,
   Share2,
@@ -656,28 +657,42 @@ function AgendaPanel({
         transition: isDragging ? 'none' : 'height 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
       }}
     >
-      {/* Drag Handle */}
+      {/* Drag Handle + Header - Tap to toggle, drag to resize */}
       <div
-        className="flex flex-col items-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
+        className="cursor-grab active:cursor-grabbing select-none"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown}
+        onClick={() => {
+          // Toggle between collapsed and half on tap
+          if (!isDragging) {
+            haptics.light();
+            onSnapChange(snapPoint === 'collapsed' ? 'half' : 'collapsed');
+          }
+        }}
       >
-        <div className="cal-agenda-handle" />
-      </div>
-
-      {/* Header */}
-      <div className="px-4 py-2 border-b border-[var(--cal-border-subtle)]">
-        <h2
-          className="font-semibold text-[var(--cal-text-primary)]"
-          style={{ fontSize: 'clamp(16px, 2.8vw, 18px)' }}
-        >
-          {isToday ? 'Hoy' : capitalize(selectedDate.format('dddd'))}
-          <span className="font-normal text-[var(--cal-text-secondary)] ml-1.5">
-            {selectedDate.format('D [de] MMMM')}
-          </span>
-        </h2>
+        <div className="flex flex-col items-center pt-2 pb-1">
+          <div className="cal-agenda-handle" />
+        </div>
+        <div className="px-4 py-2 border-b border-[var(--cal-border-subtle)]">
+          <h2
+            className="font-semibold text-[var(--cal-text-primary)]"
+            style={{ fontSize: 'clamp(16px, 2.8vw, 18px)' }}
+          >
+            {isToday ? 'Hoy' : capitalize(selectedDate.format('dddd'))}
+            <span className="font-normal text-[var(--cal-text-secondary)] ml-1.5">
+              {selectedDate.format('D [de] MMMM')}
+            </span>
+            {/* Expand/collapse indicator */}
+            <ChevronUp
+              className={cn(
+                'inline-block ml-2 w-4 h-4 text-[var(--cal-text-tertiary)] transition-transform duration-300',
+                snapPoint === 'collapsed' ? 'rotate-180' : 'rotate-0'
+              )}
+            />
+          </h2>
+        </div>
       </div>
 
       {/* Events list */}
