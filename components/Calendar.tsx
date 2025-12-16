@@ -383,17 +383,17 @@ function DayCellDetailed({
         {day.format('D')}
       </span>
 
-      <div className="flex flex-col gap-[2px] flex-1">
+      <div className="flex flex-col gap-[2px] flex-1 min-w-0">
         {visibleEvents.map((event) => {
           const cat = detectCategory(event.title);
           return (
             <div key={event.id} className={cn('cal-event-chip', CATEGORY_CLASSES[cat].chip)}>
-              {event.title.slice(0, 12)}
+              {event.title}
             </div>
           );
         })}
         {overflow > 0 && (
-          <span className="text-[9px] font-medium text-[var(--cal-text-tertiary)] pl-1">
+          <span className="text-[9px] font-medium text-[var(--cal-text-secondary)] pl-1">
             +{overflow} más
           </span>
         )}

@@ -889,12 +889,12 @@ html {
   border: 1px solid transparent;
 }
 
-/* Agenda Panel */
+/* Agenda Panel - positioned above tab bar */
 .cal-agenda-panel {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: calc(68px + env(safe-area-inset-bottom));
   background: var(--cal-surface);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
@@ -902,7 +902,7 @@ html {
   border-top: 1px solid var(--cal-border-subtle);
   touch-action: none;
   will-change: height;
-  z-index: 30;
+  z-index: 40;
 }
 
 .cal-agenda-handle {
