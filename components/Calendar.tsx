@@ -1,7 +1,27 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Share2, Download, Loader2, X } from 'lucide-react';
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type TouchEvent as ReactTouchEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Clock,
+  Share2,
+  Download,
+  Loader2,
+  X,
+  MoreHorizontal,
+  RefreshCw,
+  Calendar as CalendarIcon,
+} from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { haptics } from '@/lib/haptics';
@@ -13,34 +33,11 @@ import { useCalendarEvents } from '@/hooks/useCachedFetch';
 dayjs.locale('es');
 
 // =============================================================================
-// DESIGN TOKENS - Sistema de diseño consistente
-// =============================================================================
-const tokens = {
-  // Colores principales
-  colors: {
-    primary: 'rgb(0, 122, 255)', // iOS Blue
-    primaryBg: 'rgb(0, 122, 255)',
-    today: 'rgb(255, 59, 48)', // iOS Red
-    text: {
-      primary: 'text-slate-900 dark:text-white',
-      secondary: 'text-slate-500 dark:text-slate-400',
-      tertiary: 'text-slate-400 dark:text-slate-500',
-    },
-  },
-  // Categorías de eventos (dots)
-  dots: {
-    mass: 'bg-blue-500',
-    confession: 'bg-violet-500',
-    adoration: 'bg-amber-500',
-    meeting: 'bg-emerald-500',
-    other: 'bg-slate-400',
-  },
-} as const;
-
-// =============================================================================
 // TYPES
 // =============================================================================
+type ViewMode = 'compact' | 'detailed' | 'agenda';
 type EventCategory = 'mass' | 'confession' | 'adoration' | 'meeting' | 'other';
+type SnapPoint = 'collapsed' | 'half' | 'full';
 
 interface Event {
   id: string;
@@ -53,9 +50,32 @@ interface Event {
 }
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+const SNAP_HEIGHTS: Record<SnapPoint, number> = {
+  collapsed: 180,
+  half: 0.55,
+  full: 0.9,
+};
+
+const VIEW_LABELS: Record<ViewMode, string> = {
+  compact: 'Mes',
+  detailed: 'Detalle',
+  agenda: 'Agenda',
+};
+
+const CATEGORY_CLASSES: Record<EventCategory, { dot: string; chip: string }> = {
+  mass: { dot: 'cal-cat-mass', chip: 'cal-chip-mass' },
+  confession: { dot: 'cal-cat-confession', chip: 'cal-chip-confession' },
+  adoration: { dot: 'cal-cat-adoration', chip: 'cal-chip-adoration' },
+  meeting: { dot: 'cal-cat-meeting', chip: 'cal-chip-meeting' },
+  other: { dot: 'cal-cat-other', chip: 'cal-chip-other' },
+};
+
+// =============================================================================
 // UTILITIES
 // =============================================================================
-function capitalize(value: string) {
+function capitalize(value: string): string {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
@@ -68,7 +88,7 @@ function detectCategory(title: string): EventCategory {
   return 'other';
 }
 
-function formatEventTime(event: Event) {
+function formatEventTime(event: Event): string {
   if (event.allDay) return 'Todo el día';
   const start = dayjs(event.start);
   const end = event.end ? dayjs(event.end) : null;
@@ -78,8 +98,13 @@ function formatEventTime(event: Event) {
   return start.format('HH:mm');
 }
 
+function formatShortTime(event: Event): string {
+  if (event.allDay) return 'Día';
+  return dayjs(event.start).format('HH:mm');
+}
+
 // ICS helpers
-function escapeICS(value: string) {
+function escapeICS(value: string): string {
   return value
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
@@ -87,12 +112,12 @@ function escapeICS(value: string) {
     .replace(/\n/g, '\\n');
 }
 
-function formatICSDate(date: Date) {
+function formatICSDate(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 }
 
-function buildICS(event: Event) {
+function buildICS(event: Event): string {
   const start = new Date(event.start);
   const end = event.end ? new Date(event.end) : new Date(start.getTime() + 3600000);
   return [
@@ -117,63 +142,142 @@ function buildICS(event: Event) {
 // COMPONENTS
 // =============================================================================
 
-/** Header del calendario - Mes/Año + Navegación + Hoy */
+/** iOS-style Segmented Control */
+function ViewSwitcher({
+  value,
+  onChange,
+}: {
+  value: ViewMode;
+  onChange: (mode: ViewMode) => void;
+}) {
+  const modes: ViewMode[] = ['compact', 'detailed', 'agenda'];
+  const activeIndex = modes.indexOf(value);
+
+  return (
+    <div className="px-4 pb-3">
+      <div className="segmented-control relative">
+        {/* Sliding background */}
+        <div
+          className="absolute top-[2px] bottom-[2px] bg-[var(--cal-surface)] rounded-[7px] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] transition-transform duration-200 ease-out"
+          style={{
+            width: `calc(${100 / modes.length}% - 2px)`,
+            left: '2px',
+            transform: `translateX(calc(${activeIndex * 100}% + ${activeIndex * 2}px))`,
+          }}
+        />
+        {modes.map((mode) => (
+          <button
+            key={mode}
+            onClick={() => {
+              haptics.light();
+              onChange(mode);
+            }}
+            className="segmented-button"
+            data-active={value === mode}
+          >
+            {VIEW_LABELS[mode]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Calendar Header with navigation and actions */
 function CalendarHeader({
   currentMonth,
   onPrev,
   onNext,
   onToday,
+  onRefresh,
+  isRefreshing,
 }: {
   currentMonth: dayjs.Dayjs;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }) {
-  return (
-    <header className="flex items-center justify-between px-5 py-4">
-      {/* Título del mes */}
-      <h1 className="text-[22px] font-bold text-slate-900 dark:text-white tracking-tight">
-        {capitalize(currentMonth.format('MMMM YYYY'))}
-      </h1>
+  const [showMenu, setShowMenu] = useState(false);
 
-      {/* Controles */}
+  return (
+    <header className="flex items-center justify-between px-4 py-3">
+      {/* Navigation */}
       <div className="flex items-center gap-1">
         <button
           onClick={onPrev}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--cal-surface-secondary)] active:scale-95 transition-all"
           aria-label="Mes anterior"
         >
-          <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          <ChevronLeft className="w-5 h-5 text-[var(--cal-text-secondary)]" />
         </button>
+
+        <h1 className="text-[20px] font-semibold text-[var(--cal-text-primary)] min-w-[160px] text-center tracking-tight">
+          {capitalize(currentMonth.format('MMMM YYYY'))}
+        </h1>
+
         <button
           onClick={onNext}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--cal-surface-secondary)] active:scale-95 transition-all"
           aria-label="Mes siguiente"
         >
-          <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          <ChevronRight className="w-5 h-5 text-[var(--cal-text-secondary)]" />
         </button>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1">
         <button
           onClick={onToday}
-          className="ml-2 px-3 h-8 text-[13px] font-semibold text-blue-600 dark:text-blue-400 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30 active:scale-95 transition-all"
+          className="px-3 h-8 text-[13px] font-semibold text-[var(--cal-primary)] rounded-full hover:bg-[var(--cal-primary-soft)] active:scale-95 transition-all"
         >
           Hoy
         </button>
+
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--cal-surface-secondary)] active:scale-95 transition-all"
+            aria-label="Más opciones"
+          >
+            <MoreHorizontal className="w-5 h-5 text-[var(--cal-text-secondary)]" />
+          </button>
+
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-full mt-2 z-50 bg-[var(--cal-surface)] rounded-xl shadow-lg border border-[var(--cal-border)] py-1 min-w-[160px] cal-animate-fade-scale">
+                <button
+                  onClick={() => {
+                    onRefresh();
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-[15px] text-[var(--cal-text-primary)] hover:bg-[var(--cal-surface-secondary)] transition-colors"
+                >
+                  <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+                  Actualizar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
 }
 
-/** Fila de días de la semana */
+/** Weekday row header */
 function WeekdayRow() {
   const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
   return (
-    <div className="grid grid-cols-7 px-3 mb-1">
+    <div className="grid grid-cols-7 px-2 mb-1">
       {days.map((day, i) => (
         <div
           key={day + i}
           className={cn(
             'h-8 flex items-center justify-center text-[11px] font-semibold tracking-wide',
-            i >= 5 ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'
+            i >= 5 ? 'text-[var(--cal-text-tertiary)]' : 'text-[var(--cal-text-secondary)]'
           )}
         >
           {day}
@@ -183,78 +287,50 @@ function WeekdayRow() {
   );
 }
 
-/** Celda de día individual */
-function DayCell({
+/** Single day cell - Compact mode (dots only) */
+function DayCellCompact({
   day,
   isToday,
   isSelected,
   isCurrentMonth,
-  eventCount,
-  eventCategories,
+  events,
   onSelect,
 }: {
   day: dayjs.Dayjs;
   isToday: boolean;
   isSelected: boolean;
   isCurrentMonth: boolean;
-  eventCount: number;
-  eventCategories: EventCategory[];
+  events: Event[];
   onSelect: () => void;
 }) {
-  const showDots = eventCount > 0 && eventCount <= 3;
-  const showOverflow = eventCount > 3;
+  const categories = events.slice(0, 3).map((e) => detectCategory(e.title));
+  const hasOverflow = events.length > 3;
 
   return (
     <button
       onClick={onSelect}
       className={cn(
-        'relative flex flex-col items-center justify-center h-11 rounded-full transition-colors',
-        'active:scale-95 transition-transform',
-        !isCurrentMonth && 'opacity-30',
-        isSelected && 'bg-blue-600'
+        'cal-day py-1',
+        !isCurrentMonth && 'cal-day-other-month',
+        isToday && 'cal-day-today',
+        isSelected && 'cal-day-selected'
       )}
-      aria-label={`${day.format('D [de] MMMM')}, ${eventCount} eventos`}
+      aria-label={`${day.format('D [de] MMMM')}, ${events.length} eventos`}
       aria-pressed={isSelected}
     >
-      {/* Indicador de HOY (punto rojo pequeño arriba) */}
-      {isToday && !isSelected && (
-        <span className="absolute top-1 w-1.5 h-1.5 rounded-full bg-red-500" />
-      )}
+      <span className="cal-day-number">{day.format('D')}</span>
 
-      {/* Número del día */}
-      <span
-        className={cn(
-          'text-[15px] font-medium leading-none',
-          isSelected ? 'text-white font-semibold' : 'text-slate-900 dark:text-white',
-          isToday && !isSelected && 'text-red-500 font-semibold'
-        )}
-      >
-        {day.format('D')}
-      </span>
-
-      {/* Dots de eventos */}
-      {(showDots || showOverflow) && (
-        <div className="flex items-center gap-[3px] mt-1 h-[5px]">
-          {showDots &&
-            eventCategories
-              .slice(0, 3)
-              .map((cat, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    'w-[5px] h-[5px] rounded-full',
-                    isSelected ? 'bg-white/80' : tokens.dots[cat]
-                  )}
-                />
-              ))}
-          {showOverflow && (
+      {events.length > 0 && (
+        <div className="cal-dots">
+          {categories.map((cat, i) => (
             <span
-              className={cn(
-                'text-[9px] font-bold leading-none',
-                isSelected ? 'text-white/70' : 'text-slate-400'
-              )}
-            >
-              +{eventCount - 2}
+              key={i}
+              className={cn('cal-dot', isSelected ? 'bg-white/70' : CATEGORY_CLASSES[cat].dot)}
+            />
+          ))}
+          {hasOverflow && (
+            <span className={cn('cal-dot-overflow', isSelected && 'text-white/60')}>
+              +{events.length - 3}
             </span>
           )}
         </div>
@@ -263,16 +339,77 @@ function DayCell({
   );
 }
 
-/** Grid del mes completo */
+/** Single day cell - Detailed mode (chips) */
+function DayCellDetailed({
+  day,
+  isToday,
+  isSelected,
+  isCurrentMonth,
+  events,
+  onSelect,
+}: {
+  day: dayjs.Dayjs;
+  isToday: boolean;
+  isSelected: boolean;
+  isCurrentMonth: boolean;
+  events: Event[];
+  onSelect: () => void;
+}) {
+  const visibleEvents = events.slice(0, 2);
+  const overflow = events.length - 2;
+
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        'flex flex-col items-stretch p-1 min-h-[72px] border-b border-r border-[var(--cal-border-subtle)] transition-colors',
+        !isCurrentMonth && 'opacity-30',
+        isSelected && 'bg-[var(--cal-primary-soft)]'
+      )}
+      aria-label={`${day.format('D [de] MMMM')}, ${events.length} eventos`}
+    >
+      <span
+        className={cn(
+          'w-6 h-6 flex items-center justify-center rounded-full text-[13px] font-medium mb-1 self-end',
+          isToday && !isSelected && 'bg-[var(--cal-today)] text-white',
+          isSelected && 'bg-[var(--cal-primary)] text-white',
+          !isToday && !isSelected && 'text-[var(--cal-text-primary)]'
+        )}
+      >
+        {day.format('D')}
+      </span>
+
+      <div className="flex flex-col gap-[2px] flex-1">
+        {visibleEvents.map((event) => {
+          const cat = detectCategory(event.title);
+          return (
+            <div key={event.id} className={cn('cal-event-chip', CATEGORY_CLASSES[cat].chip)}>
+              {event.title.slice(0, 12)}
+            </div>
+          );
+        })}
+        {overflow > 0 && (
+          <span className="text-[9px] font-medium text-[var(--cal-text-tertiary)] pl-1">
+            +{overflow} más
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/** Month Grid - supports compact and detailed modes */
 function MonthGrid({
   currentMonth,
   selectedDate,
   eventsByDate,
+  viewMode,
   onSelectDate,
 }: {
   currentMonth: dayjs.Dayjs;
   selectedDate: dayjs.Dayjs;
   eventsByDate: Record<string, Event[]>;
+  viewMode: 'compact' | 'detailed';
   onSelectDate: (date: dayjs.Dayjs) => void;
 }) {
   const days = useMemo(() => {
@@ -287,13 +424,19 @@ function MonthGrid({
 
   const today = dayjs();
 
+  const DayCell = viewMode === 'compact' ? DayCellCompact : DayCellDetailed;
+
   return (
-    <div className="px-3">
-      <div className="grid grid-cols-7 gap-y-1">
+    <div
+      className={cn(
+        'px-2',
+        viewMode === 'detailed' && 'border-t border-l border-[var(--cal-border-subtle)]'
+      )}
+    >
+      <div className="grid grid-cols-7">
         {days.map((day) => {
           const dateKey = day.format('YYYY-MM-DD');
           const events = eventsByDate[dateKey] || [];
-          const categories = events.map((e) => detectCategory(e.title));
 
           return (
             <DayCell
@@ -302,8 +445,7 @@ function MonthGrid({
               isToday={day.isSame(today, 'day')}
               isSelected={day.isSame(selectedDate, 'day')}
               isCurrentMonth={day.isSame(currentMonth, 'month')}
-              eventCount={events.length}
-              eventCategories={categories}
+              events={events}
               onSelect={() => {
                 haptics.light();
                 onSelectDate(day);
@@ -316,82 +458,236 @@ function MonthGrid({
   );
 }
 
-/** Fila de evento en la agenda */
-function EventRow({ event, onTap }: { event: Event; onTap: () => void }) {
+/** Event Card for agenda views */
+function EventCard({
+  event,
+  onTap,
+  showDate = false,
+}: {
+  event: Event;
+  onTap: () => void;
+  showDate?: boolean;
+}) {
   const category = detectCategory(event.title);
-  const dotColor = tokens.dots[category];
 
   return (
-    <button
-      onClick={onTap}
-      className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800 transition-colors text-left"
-    >
-      {/* Hora */}
-      <div className="w-14 shrink-0 pt-0.5">
-        <span className="text-[13px] font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
-          {event.allDay ? 'Día' : dayjs(event.start).format('HH:mm')}
-        </span>
-      </div>
+    <button onClick={onTap} className="cal-event-card w-full text-left">
+      <div className={cn('cal-event-indicator self-stretch', CATEGORY_CLASSES[category].dot)} />
 
-      {/* Dot de categoría */}
-      <span className={cn('w-2 h-2 rounded-full mt-1.5 shrink-0', dotColor)} />
-
-      {/* Contenido */}
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-medium text-slate-900 dark:text-white leading-snug">
+        <p className="text-[15px] font-medium text-[var(--cal-text-primary)] leading-snug truncate">
           {event.title}
         </p>
+
+        <div className="flex items-center gap-2 mt-1 text-[13px] text-[var(--cal-text-secondary)]">
+          <Clock className="w-3.5 h-3.5" />
+          <span>
+            {showDate && `${capitalize(dayjs(event.start).format('ddd D'))} · `}
+            {formatShortTime(event)}
+          </span>
+        </div>
+
         {event.location && (
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-            <MapPin className="w-3 h-3 shrink-0" />
+          <div className="flex items-center gap-2 mt-0.5 text-[13px] text-[var(--cal-text-secondary)]">
+            <MapPin className="w-3.5 h-3.5" />
             <span className="truncate">{event.location}</span>
-          </p>
+          </div>
         )}
       </div>
 
-      {/* Flecha */}
-      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 mt-1 shrink-0" />
+      <ChevronRight className="w-4 h-4 text-[var(--cal-text-tertiary)] self-center shrink-0" />
     </button>
   );
 }
 
-/** Panel de agenda para el día seleccionado */
+/** Draggable Agenda Panel with snap points */
 function AgendaPanel({
   selectedDate,
   events,
   onEventTap,
+  snapPoint,
+  onSnapChange,
 }: {
   selectedDate: dayjs.Dayjs;
   events: Event[];
   onEventTap: (event: Event) => void;
+  snapPoint: SnapPoint;
+  onSnapChange: (snap: SnapPoint) => void;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef<{ y: number; height: number } | null>(null);
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const isToday = selectedDate.isSame(dayjs(), 'day');
 
+  // Calculate actual height from snap point
+  const getSnapHeight = useCallback((snap: SnapPoint): number => {
+    if (typeof window === 'undefined') return SNAP_HEIGHTS.collapsed;
+    const vh = window.innerHeight;
+    const value = SNAP_HEIGHTS[snap];
+    return typeof value === 'number' ? value : vh * value;
+  }, []);
+
+  // Snap to nearest point
+  const snapToNearest = useCallback(
+    (height: number) => {
+      const vh = window.innerHeight;
+      const points: [SnapPoint, number][] = [
+        ['collapsed', SNAP_HEIGHTS.collapsed],
+        ['half', vh * 0.55],
+        ['full', vh * 0.9],
+      ];
+
+      let closest: SnapPoint = 'collapsed';
+      let minDiff = Infinity;
+
+      for (const [name, target] of points) {
+        const diff = Math.abs(height - target);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = name;
+        }
+      }
+
+      onSnapChange(closest);
+      setDragHeight(null); // Clear drag height, use snap point
+    },
+    [onSnapChange]
+  );
+
+  // Handle drag start
+  const handleDragStart = useCallback(
+    (clientY: number) => {
+      const h = dragHeight ?? getSnapHeight(snapPoint);
+      dragStartRef.current = { y: clientY, height: h };
+      setIsDragging(true);
+    },
+    [dragHeight, getSnapHeight, snapPoint]
+  );
+
+  // Handle drag move
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!dragStartRef.current) return;
+    const deltaY = dragStartRef.current.y - clientY;
+    const newHeight = Math.max(
+      100,
+      Math.min(window.innerHeight * 0.95, dragStartRef.current.height + deltaY)
+    );
+    setDragHeight(newHeight);
+  }, []);
+
+  // Handle drag end
+  const handleDragEnd = useCallback(() => {
+    if (dragStartRef.current && dragHeight !== null) {
+      snapToNearest(dragHeight);
+    }
+    dragStartRef.current = null;
+    setIsDragging(false);
+  }, [dragHeight, snapToNearest]);
+
+  // Touch handlers
+  const onTouchStart = (e: ReactTouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) handleDragStart(touch.clientY);
+  };
+
+  const onTouchMove = (e: ReactTouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) handleDragMove(touch.clientY);
+  };
+
+  const onTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  // Mouse handlers (for desktop)
+  const onMouseDown = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientY);
+
+    const onMouseMove = (ev: MouseEvent) => handleDragMove(ev.clientY);
+    const onMouseUp = () => {
+      handleDragEnd();
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  // Calculate the actual height to use
+  const currentHeight = isDragging && dragHeight !== null ? dragHeight : getSnapHeight(snapPoint);
+
+  // Lock body scroll when expanded
+  useEffect(() => {
+    if (snapPoint === 'full') {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [snapPoint]);
+
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-      {/* Header del día */}
-      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-        <h2 className="text-[15px] font-semibold text-slate-900 dark:text-white">
+    <div
+      ref={panelRef}
+      className="cal-agenda-panel"
+      style={{
+        height: `${currentHeight}px`,
+        transition: isDragging ? 'none' : 'height 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+      }}
+    >
+      {/* Drag Handle */}
+      <div
+        className="flex flex-col items-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown}
+      >
+        <div className="cal-agenda-handle" />
+      </div>
+
+      {/* Header */}
+      <div className="px-4 py-2 border-b border-[var(--cal-border-subtle)]">
+        <h2 className="text-[15px] font-semibold text-[var(--cal-text-primary)]">
           {isToday ? 'Hoy' : capitalize(selectedDate.format('dddd'))}
-          <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">
+          <span className="font-normal text-[var(--cal-text-secondary)] ml-1.5">
             {selectedDate.format('D [de] MMMM')}
           </span>
         </h2>
       </div>
 
-      {/* Lista de eventos */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Events list */}
+      <div
+        ref={contentRef}
+        className="overflow-y-auto overscroll-contain cal-safe-bottom"
+        style={{ height: 'calc(100% - 70px)' }}
+      >
         {events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
-              <span className="text-2xl">📅</span>
+          <div className="flex flex-col items-center justify-center py-12 text-[var(--cal-text-tertiary)]">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--cal-surface-secondary)] flex items-center justify-center mb-3">
+              <CalendarIcon className="w-7 h-7" />
             </div>
             <p className="text-[15px] font-medium">Sin eventos</p>
+            <p className="text-[13px] mt-0.5">No hay actividades programadas</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="p-3 space-y-2">
             {events.map((event) => (
-              <EventRow key={event.id} event={event} onTap={() => onEventTap(event)} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onTap={() => {
+                  haptics.medium();
+                  onEventTap(event);
+                }}
+              />
             ))}
           </div>
         )}
@@ -400,7 +696,91 @@ function AgendaPanel({
   );
 }
 
-/** Bottom Sheet de detalles del evento */
+/** Full Agenda View (continuous list by date) */
+function AgendaView({
+  events,
+  onEventTap,
+}: {
+  events: Event[];
+  onEventTap: (event: Event) => void;
+}) {
+  // Group events by date
+  const groupedEvents = useMemo(() => {
+    const groups: { date: dayjs.Dayjs; events: Event[] }[] = [];
+    const sorted = [...events].sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+
+    for (const event of sorted) {
+      const eventDate = dayjs(event.start).startOf('day');
+      const lastGroup = groups[groups.length - 1];
+
+      if (lastGroup && lastGroup.date.isSame(eventDate, 'day')) {
+        lastGroup.events.push(event);
+      } else {
+        groups.push({ date: eventDate, events: [event] });
+      }
+    }
+
+    return groups;
+  }, [events]);
+
+  const today = dayjs();
+
+  if (events.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-[var(--cal-text-tertiary)]">
+        <div className="w-16 h-16 rounded-2xl bg-[var(--cal-surface-secondary)] flex items-center justify-center mb-4">
+          <CalendarIcon className="w-8 h-8" />
+        </div>
+        <p className="text-[17px] font-medium">Sin eventos próximos</p>
+        <p className="text-[14px] mt-1">No hay actividades programadas</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-24 cal-safe-bottom">
+      {groupedEvents.map(({ date, events: dayEvents }) => {
+        const isToday = date.isSame(today, 'day');
+        const isTomorrow = date.isSame(today.add(1, 'day'), 'day');
+
+        return (
+          <div key={date.format('YYYY-MM-DD')}>
+            {/* Date Header */}
+            <div className="sticky top-0 z-10 px-4 py-2 bg-[var(--cal-bg)]/95 backdrop-blur-sm border-b border-[var(--cal-border-subtle)]">
+              <h3 className="text-[13px] font-semibold text-[var(--cal-text-secondary)] uppercase tracking-wide">
+                {isToday ? (
+                  <span className="text-[var(--cal-today)]">Hoy</span>
+                ) : isTomorrow ? (
+                  'Mañana'
+                ) : (
+                  capitalize(date.format('dddd, D [de] MMMM'))
+                )}
+              </h3>
+            </div>
+
+            {/* Events */}
+            <div className="p-3 space-y-2">
+              {dayEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onTap={() => {
+                    haptics.medium();
+                    onEventTap(event);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Event Detail Bottom Sheet */
 function EventDetailSheet({
   event,
   onClose,
@@ -413,101 +793,114 @@ function EventDetailSheet({
   onDownload: () => void;
 }) {
   const category = detectCategory(event.title);
-  const dotColor = tokens.dots[category];
+
+  // Prevent body scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       {/* Overlay */}
       <button
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-label="Cerrar"
       />
 
       {/* Sheet */}
       <div
-        className="relative w-full bg-white dark:bg-slate-900 rounded-t-2xl shadow-2xl animate-slide-up max-h-[80vh] flex flex-col"
+        className="relative w-full bg-[var(--cal-surface)] rounded-t-[20px] shadow-2xl animate-slide-up max-h-[85vh] flex flex-col"
         role="dialog"
         aria-modal="true"
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-9 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+          <div className="w-9 h-1 rounded-full bg-[var(--cal-border)]" />
         </div>
 
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--cal-surface-secondary)] text-[var(--cal-text-secondary)] hover:bg-[var(--cal-border)] transition-colors active:scale-95"
           aria-label="Cerrar"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Content */}
-        <div
-          className="px-5 pb-6 overflow-y-auto flex-1"
-          style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
-        >
-          {/* Title */}
-          <div className="flex items-start gap-3 mb-4">
-            <span className={cn('w-3 h-3 rounded-full mt-1.5 shrink-0', dotColor)} />
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight pr-8">
-              {event.title}
-            </h2>
+        <div className="px-5 pb-6 overflow-y-auto flex-1 cal-safe-bottom">
+          {/* Category indicator + Title */}
+          <div className="flex items-start gap-3 mb-5">
+            <div className={cn('w-1 self-stretch rounded-full', CATEGORY_CLASSES[category].dot)} />
+            <div className="flex-1 pr-6">
+              <h2 className="text-[22px] font-bold text-[var(--cal-text-primary)] leading-tight">
+                {event.title}
+              </h2>
+            </div>
           </div>
 
-          {/* Date & Time */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4">
-            <p className="text-[15px] text-slate-900 dark:text-white font-medium">
-              {capitalize(dayjs(event.start).format('dddd, D [de] MMMM'))}
-            </p>
-            <p className="text-[17px] font-semibold text-blue-600 dark:text-blue-400 mt-1">
-              {formatEventTime(event)}
-            </p>
+          {/* Date & Time Card */}
+          <div className="bg-[var(--cal-surface-secondary)] rounded-xl p-4 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--cal-primary-soft)] flex items-center justify-center">
+                <Clock className="w-5 h-5 text-[var(--cal-primary)]" />
+              </div>
+              <div>
+                <p className="text-[15px] font-medium text-[var(--cal-text-primary)]">
+                  {capitalize(dayjs(event.start).format('dddd, D [de] MMMM'))}
+                </p>
+                <p className="text-[17px] font-semibold text-[var(--cal-primary)]">
+                  {formatEventTime(event)}
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Location */}
+          {/* Location Card */}
           {event.location && (
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
+            <div className="bg-[var(--cal-surface-secondary)] rounded-xl p-4 mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--cal-surface)] flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-[var(--cal-text-secondary)]" />
+                </div>
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <p className="text-[11px] font-semibold text-[var(--cal-text-tertiary)] uppercase tracking-wide">
                     Ubicación
                   </p>
-                  <p className="text-[15px] text-slate-900 dark:text-white mt-0.5">
-                    {event.location}
-                  </p>
+                  <p className="text-[15px] text-[var(--cal-text-primary)]">{event.location}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Description */}
+          {/* Description Card */}
           {event.description && (
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+            <div className="bg-[var(--cal-surface-secondary)] rounded-xl p-4 mb-5">
+              <p className="text-[11px] font-semibold text-[var(--cal-text-tertiary)] uppercase tracking-wide mb-2">
                 Descripción
               </p>
-              <p className="text-[15px] text-slate-700 dark:text-slate-300 whitespace-pre-line">
+              <p className="text-[15px] text-[var(--cal-text-primary)] leading-relaxed whitespace-pre-line">
                 {event.description}
               </p>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3">
             <button
               onClick={onShare}
-              className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-[15px] hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-[0.98] transition-all"
+              className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--cal-surface-secondary)] text-[var(--cal-text-primary)] font-semibold text-[15px] hover:bg-[var(--cal-border)] active:scale-[0.98] transition-all"
             >
               <Share2 className="w-5 h-5" />
               Compartir
             </button>
             <button
               onClick={onDownload}
-              className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white font-semibold text-[15px] hover:bg-blue-700 active:scale-[0.98] transition-all"
+              className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-[var(--cal-primary)] text-white font-semibold text-[15px] hover:opacity-90 active:scale-[0.98] transition-all"
             >
               <Download className="w-5 h-5" />
               Añadir
@@ -523,20 +916,28 @@ function EventDetailSheet({
 // MAIN COMPONENT
 // =============================================================================
 export function CalendarComponent() {
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const [currentMonth, setCurrentMonth] = useState(() => dayjs());
   const [selectedDate, setSelectedDate] = useState(() => dayjs());
   const [activeEvent, setActiveEvent] = useState<Event | null>(null);
+  const [agendaSnap, setAgendaSnap] = useState<SnapPoint>('collapsed');
 
-  // Fetch events for visible range
-  const visibleRange = useMemo(
-    () => ({
-      start: currentMonth.startOf('month').startOf('week'),
-      end: currentMonth.endOf('month').endOf('week'),
-    }),
-    [currentMonth]
-  );
+  // Fetch events for visible range (expanded for agenda view)
+  const visibleRange = useMemo(() => {
+    if (viewMode === 'agenda') {
+      // For agenda view, fetch current month + next 2 months
+      return {
+        start: dayjs().startOf('day'),
+        end: dayjs().add(3, 'month').endOf('month'),
+      };
+    }
+    return {
+      start: currentMonth.startOf('month').subtract(1, 'week'),
+      end: currentMonth.endOf('month').add(1, 'week'),
+    };
+  }, [currentMonth, viewMode]);
 
-  const { events, loading, error, refetch } = useCalendarEvents(
+  const { events, loading, error, refetch, isRevalidating } = useCalendarEvents(
     visibleRange.start.toDate(),
     visibleRange.end.toDate()
   );
@@ -548,7 +949,6 @@ export function CalendarComponent() {
       const key = dayjs(event.start).format('YYYY-MM-DD');
       (grouped[key] ||= []).push(event);
     }
-    // Sort each day's events
     Object.values(grouped).forEach((list) =>
       list.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
     );
@@ -576,11 +976,29 @@ export function CalendarComponent() {
     setSelectedDate(today);
   };
 
+  const handleRefresh = () => {
+    haptics.medium();
+    refetch(true);
+  };
+
   const handleSelectDate = (date: dayjs.Dayjs) => {
     setSelectedDate(date);
-    // If selected date is in a different month, navigate there
     if (!date.isSame(currentMonth, 'month')) {
       setCurrentMonth(date);
+    }
+    // Expand agenda when selecting a date
+    if (agendaSnap === 'collapsed') {
+      setAgendaSnap('half');
+    }
+  };
+
+  const handleViewChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    // Reset agenda snap when switching views
+    if (mode === 'agenda') {
+      setAgendaSnap('collapsed');
+    } else {
+      setAgendaSnap('collapsed');
     }
   };
 
@@ -588,7 +1006,7 @@ export function CalendarComponent() {
     haptics.medium();
     const text = [
       event.title,
-      `${capitalize(dayjs(event.start).format('dddd, D [de] MMMM'))}`,
+      capitalize(dayjs(event.start).format('dddd, D [de] MMMM')),
       formatEventTime(event),
       event.location,
     ]
@@ -625,56 +1043,70 @@ export function CalendarComponent() {
   // RENDER
   // ==========================================================================
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
-      {/* Header */}
+    <div className="flex flex-col h-full bg-[var(--cal-bg)] relative overflow-hidden">
+      {/* Fixed Header Area */}
       <div
-        className="bg-white dark:bg-slate-900 pt-safe"
-        style={{
-          paddingTop: 'max(env(safe-area-inset-top), 12px)',
-        }}
+        className="bg-[var(--cal-surface)] shrink-0"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
       >
         <CalendarHeader
           currentMonth={currentMonth}
           onPrev={handlePrev}
           onNext={handleNext}
           onToday={handleToday}
+          onRefresh={handleRefresh}
+          isRefreshing={isRevalidating}
         />
 
-        {/* Weekday labels */}
-        <WeekdayRow />
-
-        {/* Month Grid */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
-          </div>
-        ) : error ? (
-          <ErrorState onRetry={() => refetch(true)} />
-        ) : (
-          <MonthGrid
-            currentMonth={currentMonth}
-            selectedDate={selectedDate}
-            eventsByDate={eventsByDate}
-            onSelectDate={handleSelectDate}
-          />
-        )}
-
-        {/* Bottom padding for grid */}
-        <div className="h-3" />
+        <ViewSwitcher value={viewMode} onChange={handleViewChange} />
       </div>
 
-      {/* Agenda Panel */}
-      <AgendaPanel
-        selectedDate={selectedDate}
-        events={selectedEvents}
-        onEventTap={(e) => {
-          haptics.medium();
-          setActiveEvent(e);
-        }}
-      />
+      {/* Main Content */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--cal-primary)]" />
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center px-4">
+          <ErrorState onRetry={() => refetch(true)} />
+        </div>
+      ) : viewMode === 'agenda' ? (
+        // Full Agenda View
+        <div className="flex-1 overflow-y-auto">
+          <AgendaView events={events} onEventTap={(e) => setActiveEvent(e)} />
+        </div>
+      ) : (
+        // Month Views (compact/detailed)
+        <div className="flex-1 relative">
+          {/* Calendar Grid */}
+          <div className="bg-[var(--cal-surface)]">
+            <WeekdayRow />
+            <MonthGrid
+              currentMonth={currentMonth}
+              selectedDate={selectedDate}
+              eventsByDate={eventsByDate}
+              viewMode={viewMode}
+              onSelectDate={handleSelectDate}
+            />
+            <div className="h-3" />
+          </div>
 
-      {/* Safe area bottom spacer */}
-      <div className="h-20 bg-white dark:bg-slate-900" />
+          {/* Draggable Agenda Panel */}
+          <AgendaPanel
+            selectedDate={selectedDate}
+            events={selectedEvents}
+            onEventTap={(e) => {
+              haptics.medium();
+              setActiveEvent(e);
+            }}
+            snapPoint={agendaSnap}
+            onSnapChange={setAgendaSnap}
+          />
+        </div>
+      )}
+
+      {/* Tab bar spacer */}
+      <div className="h-20 shrink-0 bg-[var(--cal-bg)]" />
 
       {/* Event Detail Sheet */}
       {activeEvent && (

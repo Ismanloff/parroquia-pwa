@@ -617,3 +617,291 @@ html {
   background: linear-gradient(90deg, transparent, var(--card-border), transparent);
   margin: 16px 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CALENDAR DESIGN SYSTEM - iOS Premium Style
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Calendar Colors */
+  --cal-primary: #007aff;
+  --cal-primary-soft: rgba(0, 122, 255, 0.1);
+  --cal-today: #ff3b30;
+  --cal-today-soft: rgba(255, 59, 48, 0.1);
+
+  /* Calendar Category Colors */
+  --cal-cat-mass: #007aff;
+  --cal-cat-confession: #af52de;
+  --cal-cat-adoration: #ff9500;
+  --cal-cat-meeting: #34c759;
+  --cal-cat-other: #8e8e93;
+
+  /* Calendar Surfaces */
+  --cal-bg: #f2f2f7;
+  --cal-surface: #ffffff;
+  --cal-surface-secondary: #f2f2f7;
+  --cal-border: #e5e5ea;
+  --cal-border-subtle: rgba(0, 0, 0, 0.04);
+
+  /* Calendar Text */
+  --cal-text-primary: #1c1c1e;
+  --cal-text-secondary: #8e8e93;
+  --cal-text-tertiary: #c7c7cc;
+
+  /* Calendar Snap Points */
+  --cal-snap-collapsed: 180px;
+  --cal-snap-half: 55%;
+  --cal-snap-full: 90%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cal-bg: #000000;
+    --cal-surface: #1c1c1e;
+    --cal-surface-secondary: #2c2c2e;
+    --cal-border: #38383a;
+    --cal-border-subtle: rgba(255, 255, 255, 0.05);
+
+    --cal-text-primary: #ffffff;
+    --cal-text-secondary: #8e8e93;
+    --cal-text-tertiary: #48484a;
+  }
+}
+
+/* Calendar Animations */
+@keyframes cal-snap-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes cal-fade-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cal-animate-snap {
+  animation: cal-snap-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.cal-animate-fade-scale {
+  animation: cal-fade-scale 0.2s ease-out forwards;
+}
+
+/* Segmented Control iOS Style */
+.segmented-control {
+  display: flex;
+  background: var(--cal-surface-secondary);
+  border-radius: 9px;
+  padding: 2px;
+  position: relative;
+}
+
+.segmented-control::before {
+  content: '';
+  position: absolute;
+  background: var(--cal-surface);
+  border-radius: 7px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: none;
+}
+
+.segmented-button {
+  flex: 1;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  color: var(--cal-text-secondary);
+  border-radius: 7px;
+  transition: color 0.15s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.segmented-button[data-active='true'] {
+  color: var(--cal-text-primary);
+}
+
+/* Calendar Day Cell States */
+.cal-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease;
+}
+
+.cal-day:active {
+  transform: scale(0.92);
+}
+
+.cal-day-number {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 400;
+  transition: all 0.15s ease;
+}
+
+.cal-day-today .cal-day-number {
+  color: var(--cal-today);
+  font-weight: 600;
+}
+
+.cal-day-selected .cal-day-number {
+  background: var(--cal-primary);
+  color: white;
+  font-weight: 600;
+}
+
+.cal-day-today.cal-day-selected .cal-day-number {
+  background: var(--cal-today);
+}
+
+.cal-day-other-month {
+  opacity: 0.25;
+}
+
+/* Calendar Event Dots */
+.cal-dots {
+  display: flex;
+  gap: 3px;
+  margin-top: 2px;
+  height: 5px;
+  align-items: center;
+}
+
+.cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.cal-dot-overflow {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--cal-text-tertiary);
+  line-height: 1;
+}
+
+/* Event Chip for detailed view */
+.cal-event-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Agenda Panel */
+.cal-agenda-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--cal-surface);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  touch-action: none;
+  will-change: transform;
+}
+
+.cal-agenda-handle {
+  width: 36px;
+  height: 5px;
+  background: var(--cal-border);
+  border-radius: 3px;
+  margin: 8px auto;
+}
+
+/* Event Card in Agenda */
+.cal-event-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--cal-surface);
+  border-radius: 12px;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.cal-event-card:active {
+  background: var(--cal-surface-secondary);
+  transform: scale(0.98);
+}
+
+.cal-event-indicator {
+  width: 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Category colors as classes */
+.cal-cat-mass {
+  background: var(--cal-cat-mass);
+}
+.cal-cat-confession {
+  background: var(--cal-cat-confession);
+}
+.cal-cat-adoration {
+  background: var(--cal-cat-adoration);
+}
+.cal-cat-meeting {
+  background: var(--cal-cat-meeting);
+}
+.cal-cat-other {
+  background: var(--cal-cat-other);
+}
+
+.cal-chip-mass {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--cal-cat-mass);
+}
+.cal-chip-confession {
+  background: rgba(175, 82, 222, 0.12);
+  color: var(--cal-cat-confession);
+}
+.cal-chip-adoration {
+  background: rgba(255, 149, 0, 0.12);
+  color: var(--cal-cat-adoration);
+}
+.cal-chip-meeting {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--cal-cat-meeting);
+}
+.cal-chip-other {
+  background: rgba(142, 142, 147, 0.12);
+  color: var(--cal-cat-other);
+}
+
+/* Safe area handling for agenda */
+.cal-safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
