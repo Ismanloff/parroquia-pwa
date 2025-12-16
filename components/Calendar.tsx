@@ -9,7 +9,6 @@ import {
   type TouchEvent as ReactTouchEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
-import { createPortal } from 'react-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -1061,7 +1060,7 @@ export function CalendarComponent() {
   // RENDER
   // ==========================================================================
   return (
-    <div className="flex flex-col h-full bg-[var(--cal-bg)] relative overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--cal-bg)] relative">
       {/* Fixed Header Area */}
       <div
         className="bg-[var(--cal-surface)] shrink-0"
@@ -1113,22 +1112,19 @@ export function CalendarComponent() {
         </div>
       )}
 
-      {/* Draggable Agenda Panel - Rendered via Portal to escape overflow:hidden */}
-      {viewMode !== 'agenda' &&
-        typeof document !== 'undefined' &&
-        createPortal(
-          <AgendaPanel
-            selectedDate={selectedDate}
-            events={selectedEvents}
-            onEventTap={(e) => {
-              haptics.medium();
-              setActiveEvent(e);
-            }}
-            snapPoint={agendaSnap}
-            onSnapChange={setAgendaSnap}
-          />,
-          document.body
-        )}
+      {/* Draggable Agenda Panel */}
+      {viewMode !== 'agenda' && (
+        <AgendaPanel
+          selectedDate={selectedDate}
+          events={selectedEvents}
+          onEventTap={(e) => {
+            haptics.medium();
+            setActiveEvent(e);
+          }}
+          snapPoint={agendaSnap}
+          onSnapChange={setAgendaSnap}
+        />
+      )}
 
       {/* Tab bar spacer */}
       <div className="h-16 shrink-0 bg-[var(--cal-bg)]" />
