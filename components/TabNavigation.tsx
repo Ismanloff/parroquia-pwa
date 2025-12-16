@@ -28,15 +28,16 @@ export function TabNavigation() {
 
   return (
     <nav
-      className="tab-navigation-bar fixed bottom-0 left-0 right-0 z-50 glass-panel pb-safe"
+      className="tab-navigation-bar fixed bottom-0 left-0 right-0 z-50 glass-panel"
       style={{
         background: 'var(--tab-background)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         borderTop: '1px solid var(--glass-border)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="flex justify-around items-center h-[68px] max-w-lg mx-auto px-2">
+      <div className="flex justify-around items-center h-[56px] max-w-lg mx-auto px-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

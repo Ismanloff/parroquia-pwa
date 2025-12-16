@@ -52,12 +52,12 @@ interface Event {
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-const TAB_BAR_HEIGHT = 68; // Tab bar height in pixels
+const TAB_BAR_HEIGHT = 56; // Tab bar height in pixels
 
 const SNAP_HEIGHTS: Record<SnapPoint, number> = {
-  collapsed: 160,
-  half: 0.45,
-  full: 0.75,
+  collapsed: 180,
+  half: 0.5,
+  full: 0.8,
 };
 
 const VIEW_LABELS: Record<ViewMode, string> = {
@@ -542,7 +542,8 @@ function AgendaPanel({
     if (typeof window === 'undefined') return SNAP_HEIGHTS.collapsed;
     const availableHeight = window.innerHeight - TAB_BAR_HEIGHT;
     const value = SNAP_HEIGHTS[snap];
-    return typeof value === 'number' ? value : availableHeight * value;
+    // collapsed is a fixed px value (>1), half/full are percentages (<1)
+    return value > 1 ? value : availableHeight * value;
   }, []);
 
   // Snap to nearest point
@@ -1127,7 +1128,7 @@ export function CalendarComponent() {
       )}
 
       {/* Tab bar spacer */}
-      <div className="h-16 shrink-0 bg-[var(--cal-bg)]" />
+      <div className="h-14 shrink-0 bg-[var(--cal-bg)]" />
 
       {/* Event Detail Sheet */}
       {activeEvent && (
