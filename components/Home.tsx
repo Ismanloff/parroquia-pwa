@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Sparkles,
   BookOpen,
@@ -16,36 +16,25 @@ import 'dayjs/locale/es';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { haptics } from '@/lib/haptics';
 import { useNavigationStore } from '@/lib/store/navigationStore';
+import { useHomeData } from '@/hooks/useCachedFetch';
 
 dayjs.locale('es');
 
-type Saint = {
-  nombre: string;
-  descripcion: string;
-  imagen?: string | null;
-};
-
-type Gospel = {
-  cita: string;
-  texto: string;
-  reflexion?: string | null;
-};
-
-type UpcomingEvent = {
-  id: string;
-  title: string;
-  start: string;
-  location?: string;
-};
-
 export function Home() {
   const router = useRouter();
-  const [santo, setSanto] = useState<Saint | null>(null);
-  const [evangelio, setEvangelio] = useState<Gospel | null>(null);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Usar hook con caché SWR - carga instantánea de datos cacheados
+  const {
+    saint: santo,
+    gospel: evangelio,
+    upcomingEvents,
+    loading,
+    isRevalidating,
+    error,
+    refetch,
+  } = useHomeData();
+
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Pull-to-refresh states
   const [pullDistance, setPullDistance] = useState(0);
@@ -66,50 +55,10 @@ export function Home() {
     return 'Buenas noches';
   }, []);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setError(null);
-      const [saintsRes, gospelRes, eventsRes] = await Promise.all([
-        fetch(`/api/saints/today?t=${new Date().getTime()}`),
-        fetch('/api/gospel/today'),
-        fetch(
-          `/api/calendar/events?start=${new Date().toISOString()}&end=${dayjs().add(7, 'day').toISOString()}`
-        ),
-      ]);
-
-      if (saintsRes.ok) {
-        const data = await saintsRes.json();
-        setSanto(data.saint);
-      }
-
-      if (gospelRes.ok) {
-        const data = await gospelRes.json();
-        setEvangelio(data.gospel);
-      }
-
-      if (eventsRes.ok) {
-        const data = await eventsRes.json();
-        setUpcomingEvents(Array.isArray(data.events) ? data.events.slice(0, 3) : []);
-      }
-    } catch (err) {
-      console.error('Error fetching daily content:', err);
-      setError('No se pudo cargar el contenido. Verifica tu conexión.');
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await fetchData();
-      setLoading(false);
-    };
-    loadData();
-  }, [fetchData]);
-
   const handleRefresh = async () => {
     setRefreshing(true);
     haptics.light();
-    await fetchData();
+    await refetch(true); // Force refresh
     setRefreshing(false);
   };
 
@@ -134,7 +83,7 @@ export function Home() {
     if (pullDistance > 60) {
       haptics.success();
       setRefreshing(true);
-      await fetchData();
+      await refetch(true);
       setRefreshing(false);
     }
     setIsPulling(false);
@@ -250,12 +199,12 @@ export function Home() {
             {/* Refresh Button - Más prominente */}
             <button
               onClick={handleRefresh}
-              disabled={refreshing}
+              disabled={refreshing || isRevalidating}
               className="p-3 rounded-2xl bg-white dark:bg-slate-800 shadow-md hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 border border-slate-100 dark:border-slate-700"
               aria-label="Actualizar"
             >
               <RefreshCw
-                className={`w-5 h-5 text-slate-600 dark:text-slate-300 ${refreshing ? 'animate-spin' : ''}`}
+                className={`w-5 h-5 text-slate-600 dark:text-slate-300 ${refreshing || isRevalidating ? 'animate-spin' : ''}`}
               />
             </button>
           </header>

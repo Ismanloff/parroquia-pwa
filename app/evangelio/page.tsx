@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, BookOpen, Share2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { haptics } from '@/lib/haptics';
+import { useCachedFetch } from '@/hooks/useCachedFetch';
+import { CACHE_CONFIGS, CACHE_KEYS } from '@/lib/cache';
 
 dayjs.locale('es');
 
@@ -18,28 +19,15 @@ type Gospel = {
 
 export default function EvangelioPage() {
   const router = useRouter();
-  const [evangelio, setEvangelio] = useState<Gospel | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  // Usar caché SWR - carga instantánea desde caché
+  const { data: evangelio, loading } = useCachedFetch<Gospel | null>('/api/gospel/today', {
+    cacheKey: CACHE_KEYS.GOSPEL_TODAY,
+    cacheConfig: CACHE_CONFIGS.gospel,
+    transform: (json) => (json.gospel as Gospel) || null,
+  });
 
   const liturgicalSeason = getLiturgicalSeason(new Date());
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/gospel/today');
-      if (res.ok) {
-        const data = await res.json();
-        setEvangelio(data.gospel);
-      }
-    } catch (error) {
-      console.error('Error fetching gospel:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const handleBack = () => {
     haptics.light();
@@ -64,6 +52,8 @@ export default function EvangelioPage() {
   const today = dayjs();
 
   if (loading) {
+    // Widths predefinidos para evitar Math.random() durante render
+    const skeletonWidths = ['100%', '92%', '88%', '95%', '90%', '85%', '98%', '87%', '93%', '91%'];
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-background">
         <div className="pt-16 px-6">
@@ -71,12 +61,8 @@ export default function EvangelioPage() {
           <div className="h-12 w-3/4 shimmer rounded-xl mb-4" />
           <div className="h-6 w-1/2 shimmer rounded-lg mb-8" />
           <div className="space-y-4">
-            {[...Array(10)].map((_, i) => (
-              <div
-                key={i}
-                className="h-5 shimmer rounded-lg"
-                style={{ width: `${85 + Math.random() * 15}%` }}
-              />
+            {skeletonWidths.map((width, i) => (
+              <div key={i} className="h-5 shimmer rounded-lg" style={{ width }} />
             ))}
           </div>
         </div>

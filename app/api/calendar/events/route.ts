@@ -6,9 +6,10 @@ const CALENDAR_URL =
   'https://calendar.google.com/calendar/ical/343cc18bcdaf62c1dedecab354763c9da46d8bcb3291037884db08a06f911dd6%40group.calendar.google.com/public/basic.ics';
 
 // Cache para no hacer requests constantes a Google
-let cachedEvents: any[] | null = null;
+// Aumentado a 5 minutos porque parsear el ICS es costoso
+let cachedEvents: CalendarEvent[] | null = null;
 let lastFetch: number = 0;
-const CACHE_DURATION = 2 * 60 * 1000; // 2 minutos (reducido para actualizaciones más rápidas)
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 interface CalendarEvent {
   id: string;
@@ -159,7 +160,6 @@ export async function GET(request: NextRequest) {
 
     // Si se solicita refresh, invalidar caché
     if (forceRefresh) {
-      console.log('🔄 Force refresh requested, invalidating cache');
       cachedEvents = null;
       lastFetch = 0;
     }
@@ -219,12 +219,11 @@ export async function GET(request: NextRequest) {
       cached: Date.now() - lastFetch < CACHE_DURATION,
       lastUpdate: new Date(lastFetch).toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching calendar events:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error al obtener eventos del calendario' },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error ? error.message : 'Error al obtener eventos del calendario';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

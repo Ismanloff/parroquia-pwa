@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,16 +20,11 @@ import { Card } from '@/components/ui/Card';
 import { EmptyCalendar, ErrorState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { useCalendarEvents } from '@/hooks/useCachedFetch';
 
 dayjs.locale('es');
 
 type ViewMode = 'week' | 'month';
-
-type ApiResponse = {
-  events: Event[];
-  cached?: boolean;
-  lastUpdate?: string;
-};
 
 type EventCategory = 'mass' | 'confession' | 'adoration' | 'meeting' | 'other';
 
@@ -179,12 +174,9 @@ export function CalendarComponent() {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [cursorDate, setCursorDate] = useState(() => dayjs());
   const [selectedDate, setSelectedDate] = useState(() => dayjs());
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [meta, setMeta] = useState<{ cached: boolean; lastUpdate?: string } | null>(null);
   const [activeEvent, setActiveEvent] = useState<Event | null>(null);
 
+  // Calcular rango visible para el fetch
   const visibleRange = useMemo(() => {
     if (viewMode === 'month') {
       return {
@@ -198,53 +190,15 @@ export function CalendarComponent() {
     };
   }, [cursorDate, viewMode]);
 
-  const loadEvents = useCallback(
-    async (opts: { forceRefresh?: boolean } = {}) => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams({
-          start: visibleRange.start.toDate().toISOString(),
-          end: visibleRange.end.toDate().toISOString(),
-        });
-
-        if (opts.forceRefresh) {
-          params.set('refresh', 'true');
-          params.set('ts', String(Date.now())); // cache-buster (también para SW)
-        }
-
-        const res = await fetch(`/api/calendar/events?${params.toString()}`, {
-          cache: opts.forceRefresh ? 'no-store' : 'default',
-        });
-
-        const data = (await res.json().catch(() => null)) as ApiResponse | null;
-        if (!res.ok) {
-          throw new Error(
-            data?.events
-              ? 'Error al cargar eventos'
-              : (data as any)?.error || 'Error al cargar eventos'
-          );
-        }
-
-        setEvents(Array.isArray(data?.events) ? data!.events : []);
-        setMeta({ cached: Boolean(data?.cached), lastUpdate: data?.lastUpdate });
-      } catch (err) {
-        console.error(err);
-        setEvents([]);
-        setMeta(null);
-        setError('No se pudieron cargar los eventos. Revisa tu conexión e inténtalo de nuevo.');
-        haptics.error();
-      } finally {
-        setLoading(false);
-      }
-    },
-    [visibleRange.end, visibleRange.start]
-  );
-
-  useEffect(() => {
-    void loadEvents();
-  }, [loadEvents]);
+  // Usar hook con caché SWR - carga instantánea desde localStorage
+  const {
+    events,
+    loading,
+    isRevalidating,
+    error,
+    meta,
+    refetch: loadEvents,
+  } = useCalendarEvents(visibleRange.start.toDate(), visibleRange.end.toDate());
 
   // Group events by date for rendering
   const eventsByDate = useMemo(() => {
@@ -328,7 +282,7 @@ export function CalendarComponent() {
 
   const handleRefresh = () => {
     haptics.medium();
-    void loadEvents({ forceRefresh: true });
+    void loadEvents(true); // Force refresh
   };
 
   const handleShareEvent = async (event: Event) => {
@@ -740,11 +694,11 @@ export function CalendarComponent() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleRefresh}
-              disabled={loading}
+              disabled={loading || isRevalidating}
               className="p-2.5 rounded-2xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all active:scale-95 disabled:opacity-50"
               aria-label="Actualizar"
             >
-              <RefreshCw className={cn('w-5 h-5', loading && 'animate-spin')} />
+              <RefreshCw className={cn('w-5 h-5', (loading || isRevalidating) && 'animate-spin')} />
             </button>
             <button
               onClick={handleToday}

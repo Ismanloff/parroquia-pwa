@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getTodayDate } from '@/lib/dayjs';
 
+// Tipos para la respuesta
+type GospelResponse = {
+  success: boolean;
+  date: string;
+  gospel: {
+    cita: string;
+    texto: string;
+    reflexion: string | null;
+  };
+  source: string;
+  cached?: boolean;
+};
+
+// Caché del servidor - el evangelio del día no cambia frecuentemente
+let cachedGospel: { date: string; data: GospelResponse } | null = null;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+let lastFetch = 0;
+
 // Evangelio por defecto
 const DEFAULT_GOSPEL = {
   cita: 'Lucas 1, 39-45',
@@ -22,19 +40,32 @@ interface GospelRecord {
  * GET /api/gospel/today
  * Devuelve el evangelio del día según el calendario litúrgico
  * Usa Supabase para obtener datos reales de la base de datos
+ * Incluye caché del servidor para respuestas instantáneas
  */
 export async function GET(_request: NextRequest) {
   const targetDate = getTodayDate(); // Formato: YYYY-MM-DD en timezone Europe/Madrid
+  const now = Date.now();
+
+  // Verificar caché del servidor
+  if (cachedGospel && cachedGospel.date === targetDate && now - lastFetch < CACHE_DURATION) {
+    return NextResponse.json({
+      ...cachedGospel.data,
+      cached: true,
+    });
+  }
 
   try {
     // Si Supabase no está configurado, devolver evangelio por defecto
     if (!isSupabaseConfigured || !supabase) {
-      return NextResponse.json({
+      const response = {
         success: true,
         date: targetDate,
         gospel: DEFAULT_GOSPEL,
         source: 'default',
-      });
+      };
+      cachedGospel = { date: targetDate, data: response };
+      lastFetch = now;
+      return NextResponse.json(response);
     }
 
     // Intentar buscar evangelio del día en Supabase
@@ -45,18 +76,20 @@ export async function GET(_request: NextRequest) {
       .single();
 
     if (error || !data) {
-      return NextResponse.json({
+      const response = {
         success: true,
         date: targetDate,
         gospel: DEFAULT_GOSPEL,
         source: 'default',
-      });
+      };
+      cachedGospel = { date: targetDate, data: response };
+      lastFetch = now;
+      return NextResponse.json(response);
     }
 
     // Datos encontrados en Supabase
     const gospelData = data as GospelRecord;
-
-    return NextResponse.json({
+    const response = {
       success: true,
       date: targetDate,
       gospel: {
@@ -65,7 +98,13 @@ export async function GET(_request: NextRequest) {
         reflexion: gospelData.title || null,
       },
       source: 'supabase',
-    });
+    };
+
+    // Guardar en caché
+    cachedGospel = { date: targetDate, data: response };
+    lastFetch = now;
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error en /api/gospel/today:', error);
     return NextResponse.json({

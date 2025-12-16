@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getTodayDate } from '@/lib/dayjs';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Tipos para la respuesta
+type SaintResponse = {
+  success: boolean;
+  date: string;
+  saint: {
+    nombre: string;
+    descripcion: string;
+    imagen?: null;
+  };
+  source: string;
+  cached?: boolean;
+};
+
+// Caché del servidor - el santo del día no cambia frecuentemente
+let cachedSaint: { date: string; data: SaintResponse } | null = null;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutos
+let lastFetch = 0;
 
 // Santo por defecto si no hay uno específico para el día
 const DEFAULT_SAINT = {
@@ -22,19 +37,32 @@ interface SaintRecord {
  * GET /api/saints/today
  * Devuelve el santo del día actual según el calendario litúrgico
  * Usa Supabase para obtener datos reales de la base de datos
+ * Incluye caché del servidor para respuestas instantáneas
  */
 export async function GET(_request: NextRequest) {
   const targetDate = getTodayDate(); // Formato: YYYY-MM-DD en timezone Europe/Madrid
+  const now = Date.now();
+
+  // Verificar caché del servidor
+  if (cachedSaint && cachedSaint.date === targetDate && now - lastFetch < CACHE_DURATION) {
+    return NextResponse.json({
+      ...cachedSaint.data,
+      cached: true,
+    });
+  }
 
   try {
     // Si Supabase no está configurado, devolver santo por defecto
     if (!isSupabaseConfigured || !supabase) {
-      return NextResponse.json({
+      const response = {
         success: true,
         date: targetDate,
         saint: DEFAULT_SAINT,
         source: 'default',
-      });
+      };
+      cachedSaint = { date: targetDate, data: response };
+      lastFetch = now;
+      return NextResponse.json(response);
     }
 
     // Intentar buscar santo del día en Supabase
@@ -45,17 +73,20 @@ export async function GET(_request: NextRequest) {
       .single();
 
     if (error || !data) {
-      return NextResponse.json({
+      const response = {
         success: true,
         date: targetDate,
         saint: DEFAULT_SAINT,
         source: 'default',
-      });
+      };
+      cachedSaint = { date: targetDate, data: response };
+      lastFetch = now;
+      return NextResponse.json(response);
     }
 
     // Datos encontrados en Supabase
     const saintData = data as SaintRecord;
-    return NextResponse.json({
+    const response = {
       success: true,
       date: targetDate,
       saint: {
@@ -64,7 +95,13 @@ export async function GET(_request: NextRequest) {
         imagen: null,
       },
       source: 'supabase',
-    });
+    };
+
+    // Guardar en caché
+    cachedSaint = { date: targetDate, data: response };
+    lastFetch = now;
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error en /api/saints/today:', error);
     return NextResponse.json({
