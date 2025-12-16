@@ -415,14 +415,20 @@ export function CalendarComponent() {
               const dateKey = day.format('YYYY-MM-DD');
               const dayEvents = eventsByDate[dateKey] || [];
               const isSelected = day.isSame(selectedDate, 'day');
+              const isToday = day.isSame(dayjs(), 'day');
+              const isPast = day.isBefore(dayjs(), 'day');
 
-              if (dayEvents.length === 0 && !isSelected) return null;
+              // No mostrar días pasados en la agenda (solo en el strip de fechas)
+              if (isPast) return null;
+
+              // No mostrar días futuros sin eventos (a menos que esté seleccionado o sea hoy)
+              if (dayEvents.length === 0 && !isSelected && !isToday) return null;
 
               return (
                 <section key={dateKey} className="space-y-3">
                   <div className="flex items-baseline justify-between px-1">
                     <h3 className="text-base font-extrabold text-foreground tracking-tight">
-                      {day.isSame(dayjs(), 'day') ? 'Hoy' : capitalize(day.format('dddd'))}
+                      {isToday ? 'Hoy' : capitalize(day.format('dddd'))}
                       <span className="ml-2 text-sm font-semibold text-slate-500">
                         {day.format('D [de] MMMM')}
                       </span>
