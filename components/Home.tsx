@@ -165,14 +165,32 @@ export function Home() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative">
-      {/* Immersive Liturgical Background - High Performance CSS Animation */}
+      {/* Immersive Liturgical Background - High Performance & Fluid */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div
-          className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-[0.06] dark:opacity-[0.1] blur-[80px] animate-blob-slow will-change-transform"
+        <motion.div
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  x: [0, 20, 0],
+                  y: [0, -20, 0],
+                }
+          }
+          transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-[80px] opacity-[0.05] dark:opacity-[0.08] will-change-transform"
           style={{ background: liturgicalSeason.gradient[0], transform: 'translateZ(0)' }}
         />
-        <div
-          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full opacity-[0.04] dark:opacity-[0.08] blur-[70px] animate-blob-reverse will-change-transform"
+        <motion.div
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  x: [0, -30, 0],
+                  y: [0, 30, 0],
+                }
+          }
+          transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full blur-[70px] opacity-[0.03] dark:opacity-[0.06] will-change-transform"
           style={{
             background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0],
             transform: 'translateZ(0)',
@@ -227,6 +245,9 @@ export function Home() {
               scale: headerScale,
               y: headerY,
             }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="flex items-start justify-between relative z-10 will-change-transform"
           >
             <div className="pt-4">
@@ -282,7 +303,10 @@ export function Home() {
               ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 gap-4">
             {/* Evangelio Card - Premium Style */}
-            <button
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               onClick={goToEvangelio}
               aria-label="Ver el evangelio y lecturas del día"
               className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
@@ -306,10 +330,13 @@ export function Home() {
                   </p>
                 )}
               </div>
-            </button>
+            </motion.button>
 
             {/* Santo del día Card - Premium Style */}
-            <button
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               onClick={goToSanto}
               aria-label="Ver el santo del día"
               className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
@@ -347,13 +374,16 @@ export function Home() {
                   </p>
                 )}
               </div>
-            </button>
+            </motion.button>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
               UPCOMING EVENTS - Enhanced Card
               ═══════════════════════════════════════════════════════════════ */}
-          <button
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             onClick={goToCalendar}
             className="w-full bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50"
             style={{ transform: 'translateZ(0)' }}
@@ -383,7 +413,7 @@ export function Home() {
               </div>
               <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
             </div>
-          </button>
+          </motion.button>
         </div>
       </motion.div>
     </div>
