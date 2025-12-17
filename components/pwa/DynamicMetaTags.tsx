@@ -34,6 +34,15 @@ export function DynamicMetaTags() {
         document.head.appendChild(metaThemeColor);
       }
       metaThemeColor.setAttribute('content', color || '#2563eb');
+
+      // 2. Soporte específico para Samsung Internet (Navigation Bar)
+      let metaNavColor = document.querySelector('meta[name="navigation-bar-color"]');
+      if (!metaNavColor) {
+        metaNavColor = document.createElement('meta');
+        metaNavColor.setAttribute('name', 'navigation-bar-color');
+        document.head.appendChild(metaNavColor);
+      }
+      metaNavColor.setAttribute('content', isDark ? '#030712' : '#f8fafc');
     };
 
     // Actualizar al inicio
