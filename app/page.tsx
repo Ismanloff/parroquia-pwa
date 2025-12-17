@@ -31,6 +31,8 @@ const Settings = dynamic(
   }
 );
 
+import { motion, AnimatePresence } from 'framer-motion';
+
 export default function Home() {
   const { activeTab, setActiveTab } = useNavigationStore();
   const { loading, isSupabaseConfigured } = useAuth();
@@ -67,18 +69,32 @@ export default function Home() {
 
   // Usuario autenticado o Supabase no configurado (modo demo): mostrar la app
   return (
-    <div className="flex flex-col h-dvh overflow-hidden">
-      {/* Contenido principal - cambia según el tab activo */}
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'home' && <HomeComponent />}
-        {activeTab === 'calendar' && <Calendar />}
-        {activeTab === 'settings' && <Settings />}
+    <div className="flex flex-col h-dvh overflow-hidden bg-background">
+      {/* Contenido principal - con animaciones premium */}
+      <div className="flex-1 relative overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{
+              duration: 0.3,
+              ease: [0.16, 1, 0.3, 1], // Apple-style ease out
+            }}
+            className="absolute inset-0 overflow-hidden"
+          >
+            {activeTab === 'home' && <HomeComponent />}
+            {activeTab === 'calendar' && <Calendar />}
+            {activeTab === 'settings' && <Settings />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Navegación por tabs (bottom navigation) */}
       <TabNavigation />
 
-      {/* Banner de instalación (aparece después de 30 segundos) */}
+      {/* Banner de instalación - solo se muestra cuando toca */}
       <InstallBanner delay={30} position="bottom" />
     </div>
   );

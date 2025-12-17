@@ -7,6 +7,8 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { haptics } from '@/lib/haptics';
+import { useSwipeBack } from '@/hooks/useSwipeBack';
+import { motion } from 'framer-motion';
 
 dayjs.locale('es');
 
@@ -18,6 +20,7 @@ type Saint = {
 
 export default function SantoPage() {
   const router = useRouter();
+  useSwipeBack();
   const [santo, setSanto] = useState<Saint | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -66,19 +69,10 @@ export default function SantoPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-background">
-        <div className="pt-16 px-6">
-          <div className="h-8 w-24 shimmer rounded-lg mb-8" />
-          <div className="h-12 w-3/4 shimmer rounded-xl mb-4" />
-          <div className="h-6 w-1/2 shimmer rounded-lg mb-8" />
-          <div className="space-y-4">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="h-5 shimmer rounded-lg"
-                style={{ width: `${80 + Math.random() * 20}%` }}
-              />
-            ))}
-          </div>
+        <div className="pt-24 px-6 space-y-8">
+          <div className="h-48 shimmer rounded-[2rem]" />
+          <div className="h-64 shimmer rounded-[2rem]" />
+          <div className="h-32 shimmer rounded-[2rem]" />
         </div>
       </div>
     );
@@ -116,12 +110,20 @@ export default function SantoPage() {
       </header>
 
       {/* Content */}
-      <main className="pt-20 px-5 pb-8">
+      <motion.main
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="pt-20 px-5 pb-8"
+      >
         {santo ? (
           <article className="space-y-6">
             {/* Hero Section */}
-            <div
-              className="rounded-3xl p-6 text-white relative overflow-hidden"
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="rounded-[2rem] p-6 text-white relative overflow-hidden shadow-lg shadow-blue-500/10"
               style={{
                 background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}, ${liturgicalSeason.gradient[1]})`,
               }}
@@ -144,10 +146,10 @@ export default function SantoPage() {
                 </div>
                 <h2 className="text-2xl font-black leading-tight">{santo.nombre}</h2>
               </div>
-            </div>
+            </motion.div>
 
             {/* Biography Text */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700/50">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-slate-700/50">
               <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
                 <span
                   className="w-1.5 h-1.5 rounded-full"
@@ -162,7 +164,7 @@ export default function SantoPage() {
 
             {/* Feast Day Info */}
             <div
-              className="rounded-3xl p-5 border"
+              className="rounded-[2rem] p-5 border"
               style={{
                 backgroundColor: `${liturgicalSeason.gradient[0]}08`,
                 borderColor: `${liturgicalSeason.gradient[0]}20`,
@@ -195,7 +197,7 @@ export default function SantoPage() {
             <p className="text-sm text-slate-400 mt-1">Verifica tu conexión e intenta de nuevo</p>
           </div>
         )}
-      </main>
+      </motion.main>
     </div>
   );
 }

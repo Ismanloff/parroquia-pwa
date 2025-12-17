@@ -4,6 +4,7 @@ import { Calendar, Home, Settings } from 'lucide-react';
 import { useNavigationStore, type TabType } from '@/lib/store/navigationStore';
 import { cn } from '@/lib/utils';
 import { haptics } from '@/lib/haptics';
+import { motion } from 'framer-motion';
 
 const tabs = [
   {
@@ -37,7 +38,7 @@ export function TabNavigation() {
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="flex justify-around items-center h-[56px] max-w-lg mx-auto px-2">
+      <div className="flex justify-around items-center h-[64px] max-w-lg mx-auto px-6">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -53,24 +54,41 @@ export function TabNavigation() {
               }}
               className={cn(
                 'relative flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-300',
-                'touch-feedback'
+                'touch-feedback outline-none'
               )}
               aria-current={isActive ? 'page' : undefined}
             >
+              {/* Active Indicator Pill */}
+              {isActive && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute top-1 w-12 h-8 bg-blue-100/50 dark:bg-blue-900/30 rounded-2xl -z-10"
+                  transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                />
+              )}
+
               {/* Icon */}
-              <Icon
-                className={cn(
-                  'transition-all duration-200',
-                  isActive
-                    ? 'w-6 h-6 text-[var(--tab-active-text)] stroke-[2.2px]'
-                    : 'w-6 h-6 text-[var(--tab-inactive-text)] stroke-[1.5px]'
-                )}
-              />
+              <motion.div
+                animate={{
+                  scale: isActive ? 1.15 : 1,
+                  y: isActive ? -2 : 0,
+                }}
+                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              >
+                <Icon
+                  className={cn(
+                    'transition-colors duration-200',
+                    isActive
+                      ? 'w-6 h-6 text-[var(--tab-active-text)] stroke-[2.2px]'
+                      : 'w-6 h-6 text-[var(--tab-inactive-text)] stroke-[1.5px]'
+                  )}
+                />
+              </motion.div>
 
               {/* Label */}
               <span
                 className={cn(
-                  'text-[11px] font-medium transition-all duration-200',
+                  'text-[10px] font-bold transition-all duration-200 tracking-tight',
                   isActive ? 'text-[var(--tab-active-text)]' : 'text-[var(--tab-inactive-text)]'
                 )}
               >

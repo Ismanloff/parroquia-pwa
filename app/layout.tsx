@@ -25,20 +25,45 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default', // ✅ default = barra de estado normal sin translúcido
+    statusBarStyle: 'black-translucent', // ✅ black-translucent permite que el contenido suba tras la barra (premium)
     title: 'Parroquia',
     startupImage: [
+      // iPhone 15/16 Pro Max, 14 Pro Max
+      {
+        url: '/icons/icon-512x512.png',
+        media:
+          '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)',
+      },
+      // iPhone 15/16 Pro, 14 Pro
+      {
+        url: '/icons/icon-512x512.png',
+        media:
+          '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)',
+      },
+      // iPhone 13/14, 12/12 Pro
+      {
+        url: '/icons/icon-512x512.png',
+        media:
+          '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)',
+      },
+      // iPhone 13 mini, 12 mini, 11 Pro, XS, X
       {
         url: '/icons/icon-512x512.png',
         media:
           '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)',
       },
+      // iPhone 14 Plus, 13 Pro Max, 12 Pro Max
+      {
+        url: '/icons/icon-512x512.png',
+        media:
+          '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)',
+      },
     ],
   },
   other: {
-    // ✅ iOS: Forzar modo app nativa
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-title': 'Parroquia',
   },
 };
 

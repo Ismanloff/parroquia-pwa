@@ -8,6 +8,8 @@ import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { haptics } from '@/lib/haptics';
 import { useCachedFetch } from '@/hooks/useCachedFetch';
 import { CACHE_CONFIGS, CACHE_KEYS } from '@/lib/cache';
+import { useSwipeBack } from '@/hooks/useSwipeBack';
+import { motion } from 'framer-motion';
 
 dayjs.locale('es');
 
@@ -19,6 +21,7 @@ type Gospel = {
 
 export default function EvangelioPage() {
   const router = useRouter();
+  useSwipeBack(); // Habilitar gesto de volver deslizandov
 
   // Usar caché SWR - carga instantánea desde caché
   const { data: evangelio, loading } = useCachedFetch<Gospel | null>('/api/gospel/today', {
@@ -52,19 +55,12 @@ export default function EvangelioPage() {
   const today = dayjs();
 
   if (loading) {
-    // Widths predefinidos para evitar Math.random() durante render
-    const skeletonWidths = ['100%', '92%', '88%', '95%', '90%', '85%', '98%', '87%', '93%', '91%'];
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-background">
-        <div className="pt-16 px-6">
-          <div className="h-8 w-24 shimmer rounded-lg mb-8" />
-          <div className="h-12 w-3/4 shimmer rounded-xl mb-4" />
-          <div className="h-6 w-1/2 shimmer rounded-lg mb-8" />
-          <div className="space-y-4">
-            {skeletonWidths.map((width, i) => (
-              <div key={i} className="h-5 shimmer rounded-lg" style={{ width }} />
-            ))}
-          </div>
+        <div className="pt-24 px-6 space-y-8">
+          <div className="h-48 shimmer rounded-[2rem]" />
+          <div className="h-64 shimmer rounded-[2rem]" />
+          <div className="h-32 shimmer rounded-[2rem]" />
         </div>
       </div>
     );
@@ -102,12 +98,20 @@ export default function EvangelioPage() {
       </header>
 
       {/* Content */}
-      <main className="pt-20 px-5 pb-8">
+      <motion.main
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="pt-20 px-5 pb-8"
+      >
         {evangelio ? (
           <article className="space-y-6">
             {/* Hero Section */}
-            <div
-              className="rounded-3xl p-6 text-white relative overflow-hidden"
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="rounded-[2rem] p-6 text-white relative overflow-hidden shadow-lg shadow-blue-500/10"
               style={{
                 background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}, ${liturgicalSeason.gradient[1]})`,
               }}
@@ -130,10 +134,10 @@ export default function EvangelioPage() {
                 </div>
                 <h2 className="text-3xl font-black leading-tight">{evangelio.cita}</h2>
               </div>
-            </div>
+            </motion.div>
 
             {/* Gospel Text */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700/50">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-sm border border-slate-100 dark:border-slate-700/50">
               <p className="text-lg leading-relaxed text-slate-700 dark:text-slate-200 text-justify whitespace-pre-wrap">
                 {evangelio.texto}
               </p>
@@ -141,7 +145,7 @@ export default function EvangelioPage() {
 
             {/* Reflection */}
             {evangelio.reflexion && (
-              <div className="bg-amber-50 dark:bg-amber-900/10 rounded-3xl p-6 border border-amber-100 dark:border-amber-900/30">
+              <div className="bg-amber-50 dark:bg-amber-900/10 rounded-[2rem] p-6 border border-amber-100 dark:border-amber-900/30">
                 <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-3 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   Reflexión
@@ -161,7 +165,7 @@ export default function EvangelioPage() {
             <p className="text-sm text-slate-400 mt-1">Verifica tu conexión e intenta de nuevo</p>
           </div>
         )}
-      </main>
+      </motion.main>
     </div>
   );
 }

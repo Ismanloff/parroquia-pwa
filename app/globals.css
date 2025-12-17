@@ -18,11 +18,15 @@
   --foreground: #0f172a;
   --foreground-muted: #64748b;
 
-  /* Card System */
+  /* Card System - Multi-layered shadows (Premium) */
   --card-background: #ffffff;
-  --card-border: #e2e8f0;
-  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.03);
-  --card-shadow-hover: 0 4px 16px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --card-border: rgba(15, 23, 42, 0.06);
+  --card-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.03),
+    0 12px 24px -4px rgba(15, 23, 42, 0.02);
+  --card-shadow-hover:
+    0 1px 2px rgba(15, 23, 42, 0.08), 0 8px 16px rgba(15, 23, 42, 0.06),
+    0 24px 48px -8px rgba(15, 23, 42, 0.12);
 
   /* Premium Accent Gradients */
   --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
@@ -734,6 +738,7 @@ html {
   from {
     transform: translateY(100%);
   }
+
   to {
     transform: translateY(0);
   }
@@ -744,6 +749,7 @@ html {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -944,15 +950,19 @@ html {
 .cal-cat-mass {
   background: var(--cal-cat-mass);
 }
+
 .cal-cat-confession {
   background: var(--cal-cat-confession);
 }
+
 .cal-cat-adoration {
   background: var(--cal-cat-adoration);
 }
+
 .cal-cat-meeting {
   background: var(--cal-cat-meeting);
 }
+
 .cal-cat-other {
   background: var(--cal-cat-other);
 }
@@ -963,21 +973,25 @@ html {
   color: var(--cal-cat-mass);
   border-color: rgba(0, 122, 255, 0.25);
 }
+
 .cal-chip-confession {
   background: var(--cal-tint-confession);
   color: var(--cal-cat-confession);
   border-color: rgba(175, 82, 222, 0.25);
 }
+
 .cal-chip-adoration {
   background: var(--cal-tint-adoration);
   color: var(--cal-cat-adoration);
   border-color: rgba(255, 149, 0, 0.3);
 }
+
 .cal-chip-meeting {
   background: var(--cal-tint-meeting);
   color: var(--cal-cat-meeting);
   border-color: rgba(48, 209, 88, 0.25);
 }
+
 .cal-chip-other {
   background: var(--cal-tint-other);
   color: var(--cal-cat-other);

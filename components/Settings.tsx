@@ -15,7 +15,9 @@ import {
   RefreshCw,
   Download,
   Share2,
+  Vibrate,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -42,6 +44,8 @@ export function Settings() {
   const [eventNotifications, setEventNotifications] = useState(true);
   const [dailyGospelNotifications, setDailyGospelNotifications] = useState(true);
   const [saintNotifications, setSaintNotifications] = useState(true);
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     queueMicrotask(async () => {
@@ -52,10 +56,12 @@ export function Settings() {
       const savedEventNotifs = localStorage.getItem('notifications_events');
       const savedGospelNotifs = localStorage.getItem('notifications_gospel');
       const savedSaintNotifs = localStorage.getItem('notifications_saints');
+      const savedHaptics = localStorage.getItem('settings_haptics');
 
       if (savedEventNotifs !== null) setEventNotifications(savedEventNotifs === 'true');
       if (savedGospelNotifs !== null) setDailyGospelNotifications(savedGospelNotifs === 'true');
       if (savedSaintNotifs !== null) setSaintNotifications(savedSaintNotifs === 'true');
+      if (savedHaptics !== null) setHapticsEnabled(savedHaptics === 'true');
     });
   }, []);
 
@@ -140,8 +146,37 @@ export function Settings() {
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
+      {/* Immersive Liturgical Background - Blur blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <motion.div
+          animate={{
+            x: [0, -20, 0],
+            y: [0, 20, 0],
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+          className="absolute -top-32 -right-32 w-[32rem] h-[32rem] rounded-full blur-[100px] opacity-[0.05] dark:opacity-[0.1]"
+          style={{ background: liturgicalSeason.gradient[0] }}
+        />
+        <motion.div
+          animate={{
+            x: [0, 15, 0],
+            y: [0, -15, 0],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+          className="absolute bottom-0 -left-24 w-80 h-80 rounded-full blur-[100px] opacity-[0.03] dark:opacity-[0.08]"
+          style={{ background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0] }}
+        />
+      </div>
+
       {/* Premium Header - Matching Home Style */}
-      <div className="px-6 pt-16 pb-8 h-36 flex flex-col justify-end relative z-10 overflow-hidden">
+      <motion.div
+        style={{
+          opacity: Math.max(0, 1 - scrollY / 150),
+          scale: Math.max(0.95, 1 - scrollY / 500),
+          y: scrollY * 0.1,
+        }}
+        className="px-6 pt-16 pb-8 h-36 flex flex-col justify-end relative z-10 overflow-hidden"
+      >
         {/* Liturgical Glow Effect in Settings */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full opacity-10 dark:opacity-20 blur-[60px] pointer-events-none z-0"
@@ -152,13 +187,24 @@ export function Settings() {
         <h1 className="text-4xl font-black text-foreground tracking-tight relative z-10">
           Ajustes
         </h1>
-      </div>
+      </motion.div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-32 space-y-8">
+      <div
+        onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
+        className="flex-1 overflow-y-auto px-6 pb-32 space-y-8 relative z-10"
+      >
         {/* Appearance Section */}
-        <section>
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           <h2 className="section-title">Apariencia</h2>
-          <Card variant="flat" padding="none" className="overflow-hidden">
+          <Card
+            variant="flat"
+            padding="none"
+            className="overflow-hidden bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50"
+          >
             <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-800">
               {themeOptions.map((option) => (
                 <button
@@ -168,21 +214,21 @@ export function Settings() {
                     haptics.light();
                   }}
                   className={cn(
-                    'flex flex-col items-center justify-center py-4 gap-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                    'flex flex-col items-center justify-center py-5 gap-2 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-95',
                     themeMode === option.id && 'bg-blue-50/50 dark:bg-blue-900/10'
                   )}
                 >
                   <option.icon
                     className={cn(
-                      'w-6 h-6',
+                      'w-6 h-6 transition-all',
                       themeMode === option.id
-                        ? 'text-blue-600 dark:text-blue-400'
+                        ? 'text-blue-600 dark:text-blue-400 scale-110'
                         : 'text-slate-400'
                     )}
                   />
                   <span
                     className={cn(
-                      'text-xs font-medium',
+                      'text-[11px] font-bold uppercase tracking-wider',
                       themeMode === option.id
                         ? 'text-blue-700 dark:text-blue-300'
                         : 'text-slate-500'
@@ -194,7 +240,7 @@ export function Settings() {
               ))}
             </div>
           </Card>
-        </section>
+        </motion.section>
 
         {/* Notifications Section */}
         <section>
@@ -290,14 +336,45 @@ export function Settings() {
           )}
         </section>
 
-        {/* Updates Section */}
-        <section>
-          <h2 className="section-title">Actualizaciones</h2>
+        {/* General Settings */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="section-title">General</h2>
           <Card
             variant="flat"
             padding="none"
-            className="divide-y divide-slate-100 dark:divide-slate-800"
+            className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
           >
+            {/* Haptics Toggle */}
+            <div className="flex items-center p-4">
+              <div className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg mr-4">
+                <Vibrate className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-foreground">Vibración háptica</p>
+                <p className="text-xs text-slate-500">Respuesta táctil al pulsar</p>
+              </div>
+              <div
+                onClick={() =>
+                  toggleSetting('settings_haptics', !hapticsEnabled, setHapticsEnabled)
+                }
+                className={cn(
+                  'w-12 h-7 rounded-full p-1 transition-colors cursor-pointer',
+                  hapticsEnabled ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-5 h-5 bg-white rounded-full shadow-sm transition-transform',
+                    hapticsEnabled ? 'translate-x-5' : ''
+                  )}
+                />
+              </div>
+            </div>
+
             {/* Check for Updates */}
             <button
               onClick={handleCheckUpdate}
@@ -337,7 +414,7 @@ export function Settings() {
               </button>
             )}
           </Card>
-        </section>
+        </motion.section>
 
         {/* Support & Install */}
         <section className="space-y-4">
@@ -346,7 +423,7 @@ export function Settings() {
           <Card
             variant="flat"
             padding="none"
-            className="divide-y divide-slate-100 dark:divide-slate-800"
+            className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
           >
             <a
               href="https://wa.me/14155982433?text=Hola"

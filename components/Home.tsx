@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clock,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -35,6 +36,7 @@ export function Home() {
   } = useHomeData();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
   // Pull-to-refresh states
   const [pullDistance, setPullDistance] = useState(0);
@@ -108,22 +110,20 @@ export function Home() {
   if (loading) {
     return (
       <div className="flex flex-col h-full bg-slate-50 dark:bg-background">
-        <div className="pt-16 px-5 pb-6">
+        <div className="pt-20 px-6 pb-6 space-y-8">
           {/* Skeleton Header */}
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <div className="h-5 w-32 shimmer rounded-lg mb-2" />
-              <div className="h-10 w-56 shimmer rounded-xl" />
-            </div>
-            <div className="h-12 w-12 shimmer rounded-2xl" />
+          <div className="space-y-4">
+            <div className="h-4 w-24 shimmer rounded-full opacity-50" />
+            <div className="h-12 w-48 shimmer rounded-2xl" />
+            <div className="h-6 w-64 shimmer rounded-xl opacity-70" />
           </div>
-          {/* Skeleton Grid */}
+          {/* Skeleton Bento Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-44 shimmer rounded-3xl" />
-            <div className="h-44 shimmer rounded-3xl" />
+            <div className="h-48 shimmer rounded-[2rem]" />
+            <div className="h-48 shimmer rounded-[2rem]" />
           </div>
-          <div className="h-24 shimmer rounded-3xl mt-4" />
-          <div className="h-24 shimmer rounded-3xl mt-4" />
+          {/* Skeleton Event Card */}
+          <div className="h-28 shimmer rounded-[2rem]" />
         </div>
       </div>
     );
@@ -137,10 +137,33 @@ export function Home() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative">
+      {/* Immersive Liturgical Background - Blur blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <motion.div
+          animate={{
+            x: [0, 20, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-[120px] opacity-[0.08] dark:opacity-[0.12]"
+          style={{ background: liturgicalSeason.gradient[0] }}
+        />
+        <motion.div
+          animate={{
+            x: [0, -30, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full blur-[100px] opacity-[0.05] dark:opacity-[0.1]"
+          style={{ background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0] }}
+        />
+      </div>
+
       {/* Main Content with Pull-to-Refresh */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto"
+        onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
+        className="flex-1 overflow-y-auto relative z-10"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -179,10 +202,20 @@ export function Home() {
           {/* ═══════════════════════════════════════════════════════════════
               PREMIUM HEADER - Diseño más impactante
               ═══════════════════════════════════════════════════════════════ */}
-          <header className="flex items-start justify-between relative z-10">
-            <div>
+          <motion.header
+            style={{
+              opacity: Math.max(0, 1 - scrollY / 150),
+              scale: Math.max(0.9, 1 - scrollY / 500),
+              y: scrollY * 0.2,
+            }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="flex items-start justify-between relative z-10"
+          >
+            <div className="pt-4">
               {/* Greeting */}
-              <p className="text-base font-medium text-slate-400 dark:text-slate-500 mb-1">
+              <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">
                 {greeting} ✨
               </p>
               {/* Date Display - Más grande y prominente */}
@@ -215,7 +248,7 @@ export function Home() {
                 className={`w-5 h-5 text-slate-600 dark:text-slate-300 ${refreshing || isRevalidating ? 'animate-spin' : ''}`}
               />
             </button>
-          </header>
+          </motion.header>
 
           {/* Error State */}
           {error && (
@@ -233,10 +266,13 @@ export function Home() {
               ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 gap-4">
             {/* Evangelio Card - Premium Style */}
-            <button
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               onClick={goToEvangelio}
               aria-label="Ver el evangelio y lecturas del día"
-              className="group bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
+              className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
             >
               {/* Subtle Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -256,13 +292,16 @@ export function Home() {
                   </p>
                 )}
               </div>
-            </button>
+            </motion.button>
 
             {/* Santo del día Card - Premium Style */}
-            <button
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               onClick={goToSanto}
               aria-label="Ver el santo del día"
-              className="group bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
+              className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
             >
               {/* Subtle Gradient Overlay */}
               <div
@@ -296,15 +335,18 @@ export function Home() {
                   </p>
                 )}
               </div>
-            </button>
+            </motion.button>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
               UPCOMING EVENTS - Enhanced Card
               ═══════════════════════════════════════════════════════════════ */}
-          <button
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             onClick={goToCalendar}
-            className="w-full bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50"
+            className="w-full bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50"
           >
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center shrink-0 shadow-sm">
@@ -331,7 +373,7 @@ export function Home() {
               </div>
               <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
             </div>
-          </button>
+          </motion.button>
         </div>
       </div>
     </div>

@@ -30,6 +30,7 @@
     "dayjs": "^1.11.18",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",
+    "framer-motion": "^12.23.26",
     "ical.js": "^2.2.1",
     "ioredis": "^5.8.2",
     "lucide-react": "^0.548.0",

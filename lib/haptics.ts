@@ -6,6 +6,12 @@
  * This utility fails gracefully on unsupported devices.
  */
 
+const isEnabled = () => {
+  if (typeof window === 'undefined') return false;
+  const setting = localStorage.getItem('settings_haptics');
+  return setting !== 'false'; // Habilitado por defecto si no existe
+};
+
 export const haptics = {
   /**
    * Light haptic feedback (10ms)
@@ -13,7 +19,7 @@ export const haptics = {
    */
   light: () => {
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (isEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(10);
       }
     } catch (e) {
@@ -27,7 +33,7 @@ export const haptics = {
    */
   medium: () => {
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (isEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(20);
       }
     } catch (e) {
@@ -41,7 +47,7 @@ export const haptics = {
    */
   success: () => {
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (isEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([10, 30, 10]);
       }
     } catch (e) {
@@ -55,7 +61,7 @@ export const haptics = {
    */
   error: () => {
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (isEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate([50, 30, 50]);
       }
     } catch (e) {
@@ -69,7 +75,7 @@ export const haptics = {
    */
   heavy: () => {
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (isEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(30);
       }
     } catch (e) {
@@ -83,7 +89,7 @@ export const haptics = {
    */
   selection: () => {
     try {
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (isEnabled() && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(5);
       }
     } catch (e) {
