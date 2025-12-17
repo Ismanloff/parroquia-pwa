@@ -10,7 +10,14 @@ import {
   ChevronRight,
   Clock,
 } from 'lucide-react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+  useMotionValue,
+  animate,
+} from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -38,8 +45,8 @@ export function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
-  // Pull-to-refresh states
-  const [pullDistance, setPullDistance] = useState(0);
+  // Pull-to-refresh states (Optimized with MotionValues!)
+  const pullDistance = useMotionValue(0);
   const [isPulling, setIsPulling] = useState(false);
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -53,6 +60,11 @@ export function Home() {
   const headerScale = useTransform(scrollY, [0, 500], [1, 0.9]);
   const headerY = useTransform(scrollY, [0, 500], [0, 100]);
   const glowOpacity = useTransform(scrollY, [0, 300], [0.2, 0.4]);
+
+  // Derived transforms for pull-to-refresh UI (Purely GPU!)
+  const pullIndicatorOpacity = useTransform(pullDistance, [0, 60], [0, 1]);
+  const pullIndicatorRotate = useTransform(pullDistance, [0, 100], [0, 360]);
+  const pullIndicatorY = useTransform(pullDistance, [0, 100], [0, 20]);
 
   const { setActiveTab } = useNavigationStore();
 
@@ -86,20 +98,23 @@ export function Home() {
     if (!isPulling || !scrollContainerRef.current || !e.touches[0]) return;
     const distance = e.touches[0].clientY - touchStartY.current;
     if (distance > 0 && scrollContainerRef.current.scrollTop === 0) {
-      setPullDistance(Math.min(distance / 2.5, 100));
+      pullDistance.set(Math.min(distance / 2.5, 100));
     }
   };
 
   const handleTouchEnd = async () => {
     if (!isPulling) return;
-    if (pullDistance > 60) {
+    const currentDistance = pullDistance.get();
+
+    if (currentDistance > 60) {
       haptics.success();
       setRefreshing(true);
       await refetch(true);
       setRefreshing(false);
     }
+
     setIsPulling(false);
-    setPullDistance(0);
+    animate(pullDistance, 0, { type: 'spring', stiffness: 300, damping: 30 });
   };
 
   const goToCalendar = () => {
@@ -150,64 +165,47 @@ export function Home() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative">
-      {/* Immersive Liturgical Background - Simplified for performance */}
+      {/* Immersive Liturgical Background - High Performance CSS Animation */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <motion.div
-          animate={
-            shouldReduceMotion
-              ? {}
-              : {
-                  x: [0, 20, 0],
-                  y: [0, -20, 0],
-                }
-          }
-          transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-[80px] opacity-[0.06] dark:opacity-[0.1] will-change-transform"
-          style={{ background: liturgicalSeason.gradient[0] }}
+        <div
+          className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-[0.06] dark:opacity-[0.1] blur-[80px] animate-blob-slow will-change-transform"
+          style={{ background: liturgicalSeason.gradient[0], transform: 'translateZ(0)' }}
         />
-        <motion.div
-          animate={
-            shouldReduceMotion
-              ? {}
-              : {
-                  x: [0, -30, 0],
-                  y: [0, 30, 0],
-                }
-          }
-          transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full blur-[70px] opacity-[0.04] dark:opacity-[0.08] will-change-transform"
-          style={{ background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0] }}
+        <div
+          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full opacity-[0.04] dark:opacity-[0.08] blur-[70px] animate-blob-reverse will-change-transform"
+          style={{
+            background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0],
+            transform: 'translateZ(0)',
+          }}
         />
       </div>
 
       {/* Main Content with Pull-to-Refresh */}
-      <div
+      <motion.div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto relative z-10"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          transform: isPulling ? `translateY(${pullDistance}px)` : 'none',
-          transition: isPulling ? 'none' : 'transform 0.3s ease-out',
+          y: pullDistance,
         }}
       >
-        {/* Pull to Refresh Indicator - Only visible when actively pulling */}
-        {isPulling && pullDistance > 10 && (
-          <div
+        {/* Pull to Refresh Indicator - Optimized via GPU */}
+        {isPulling && (
+          <motion.div
             className="absolute top-0 w-full flex justify-center pointer-events-none z-20"
-            style={{ paddingTop: Math.min(pullDistance / 3, 20) }}
+            style={{
+              opacity: pullIndicatorOpacity,
+              y: pullIndicatorY,
+            }}
           >
             <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-full p-2.5 shadow-xl border border-white/20 dark:border-slate-700/30 ring-4 ring-black/5 dark:ring-white/5">
-              <RefreshCw
-                className={`w-5 h-5 text-blue-500 transition-transform ${pullDistance > 60 ? 'rotate-180' : ''}`}
-                style={{
-                  opacity: Math.min(pullDistance / 60, 1),
-                  transform: `rotate(${pullDistance * 3}deg)`,
-                }}
-              />
+              <motion.div style={{ rotate: pullIndicatorRotate }}>
+                <RefreshCw className="w-5 h-5 text-blue-500 transition-transform" />
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div className="px-5 pt-14 pb-32 space-y-6 relative">
@@ -229,9 +227,6 @@ export function Home() {
               scale: headerScale,
               y: headerY,
             }}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="flex items-start justify-between relative z-10 will-change-transform"
           >
             <div className="pt-4">
@@ -287,13 +282,11 @@ export function Home() {
               ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 gap-4">
             {/* Evangelio Card - Premium Style */}
-            <motion.button
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            <button
               onClick={goToEvangelio}
               aria-label="Ver el evangelio y lecturas del día"
               className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
+              style={{ transform: 'translateZ(0)' }}
             >
               {/* Subtle Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -313,16 +306,14 @@ export function Home() {
                   </p>
                 )}
               </div>
-            </motion.button>
+            </button>
 
             {/* Santo del día Card - Premium Style */}
-            <motion.button
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            <button
               onClick={goToSanto}
               aria-label="Ver el santo del día"
               className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
+              style={{ transform: 'translateZ(0)' }}
             >
               {/* Subtle Gradient Overlay */}
               <div
@@ -356,18 +347,16 @@ export function Home() {
                   </p>
                 )}
               </div>
-            </motion.button>
+            </button>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════
               UPCOMING EVENTS - Enhanced Card
               ═══════════════════════════════════════════════════════════════ */}
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          <button
             onClick={goToCalendar}
             className="w-full bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50"
+            style={{ transform: 'translateZ(0)' }}
           >
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center shrink-0 shadow-sm">
@@ -394,9 +383,9 @@ export function Home() {
               </div>
               <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
             </div>
-          </motion.button>
+          </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
