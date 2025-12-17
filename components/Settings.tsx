@@ -17,8 +17,8 @@ import {
   Share2,
   Vibrate,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { useMemo, useRef } from 'react';
 import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,7 +45,18 @@ export function Settings() {
   const [dailyGospelNotifications, setDailyGospelNotifications] = useState(true);
   const [saintNotifications, setSaintNotifications] = useState(true);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [scrollY, setScrollY] = useState(0);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
+
+  // Framer Motion Scroll Orchestration
+  const { scrollY } = useScroll({
+    container: scrollContainerRef,
+  });
+
+  const headerOpacity = useTransform(scrollY, [0, 150], [1, 0]);
+  const headerScale = useTransform(scrollY, [0, 500], [1, 0.95]);
+  const headerY = useTransform(scrollY, [0, 500], [0, 50]);
 
   useEffect(() => {
     queueMicrotask(async () => {
@@ -146,24 +157,32 @@ export function Settings() {
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
-      {/* Immersive Liturgical Background - Blur blobs */}
+      {/* Immersive Liturgical Background - Simplified for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
-          animate={{
-            x: [0, -20, 0],
-            y: [0, 20, 0],
-          }}
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  x: [0, -20, 0],
+                  y: [0, 20, 0],
+                }
+          }
           transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-          className="absolute -top-32 -right-32 w-[32rem] h-[32rem] rounded-full blur-[100px] opacity-[0.05] dark:opacity-[0.1]"
+          className="absolute -top-32 -right-32 w-[32rem] h-[32rem] rounded-full blur-[80px] opacity-[0.04] dark:opacity-[0.08] will-change-transform"
           style={{ background: liturgicalSeason.gradient[0] }}
         />
         <motion.div
-          animate={{
-            x: [0, 15, 0],
-            y: [0, -15, 0],
-          }}
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  x: [0, 15, 0],
+                  y: [0, -15, 0],
+                }
+          }
           transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          className="absolute bottom-0 -left-24 w-80 h-80 rounded-full blur-[100px] opacity-[0.03] dark:opacity-[0.08]"
+          className="absolute bottom-0 -left-24 w-80 h-80 rounded-full blur-[70px] opacity-[0.02] dark:opacity-[0.06] will-change-transform"
           style={{ background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0] }}
         />
       </div>
@@ -171,11 +190,11 @@ export function Settings() {
       {/* Premium Header - Matching Home Style */}
       <motion.div
         style={{
-          opacity: Math.max(0, 1 - scrollY / 150),
-          scale: Math.max(0.95, 1 - scrollY / 500),
-          y: scrollY * 0.1,
+          opacity: headerOpacity,
+          scale: headerScale,
+          y: headerY,
         }}
-        className="px-6 pt-16 pb-8 h-36 flex flex-col justify-end relative z-10 overflow-hidden"
+        className="px-6 pt-16 pb-8 h-36 flex flex-col justify-end relative z-20 overflow-hidden will-change-transform"
       >
         {/* Liturgical Glow Effect in Settings */}
         <div
@@ -190,7 +209,7 @@ export function Settings() {
       </motion.div>
 
       <div
-        onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-6 pb-32 space-y-8 relative z-10"
       >
         {/* Appearance Section */}

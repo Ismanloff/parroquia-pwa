@@ -10,7 +10,7 @@ import {
   ChevronRight,
   Clock,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -36,13 +36,23 @@ export function Home() {
   } = useHomeData();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
+  const shouldReduceMotion = useReducedMotion();
 
   // Pull-to-refresh states
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Framer Motion Scroll Orchestration (No re-renders!)
+  const { scrollY } = useScroll({
+    container: scrollContainerRef,
+  });
+
+  const headerOpacity = useTransform(scrollY, [0, 150], [1, 0]);
+  const headerScale = useTransform(scrollY, [0, 500], [1, 0.9]);
+  const headerY = useTransform(scrollY, [0, 500], [0, 100]);
+  const glowOpacity = useTransform(scrollY, [0, 300], [0.2, 0.4]);
 
   const { setActiveTab } = useNavigationStore();
 
@@ -110,20 +120,23 @@ export function Home() {
   if (loading) {
     return (
       <div className="flex flex-col h-full bg-slate-50 dark:bg-background">
-        <div className="pt-20 px-6 pb-6 space-y-8">
-          {/* Skeleton Header */}
-          <div className="space-y-4">
-            <div className="h-4 w-24 shimmer rounded-full opacity-50" />
-            <div className="h-12 w-48 shimmer rounded-2xl" />
-            <div className="h-6 w-64 shimmer rounded-xl opacity-70" />
+        <div className="pt-14 px-5 pb-6 space-y-6">
+          {/* Skeleton Header - Exact match with UI */}
+          <div className="pt-4 flex justify-between items-start">
+            <div className="space-y-3">
+              <div className="h-4 w-24 shimmer rounded-full" />
+              <div className="h-10 w-48 shimmer rounded-2xl" />
+              <div className="h-6 w-56 shimmer rounded-xl" />
+            </div>
+            <div className="w-12 h-12 shimmer rounded-2xl" />
           </div>
           {/* Skeleton Bento Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-48 shimmer rounded-[2rem]" />
-            <div className="h-48 shimmer rounded-[2rem]" />
+            <div className="h-44 shimmer rounded-[2rem]" />
+            <div className="h-44 shimmer rounded-[2rem]" />
           </div>
           {/* Skeleton Event Card */}
-          <div className="h-28 shimmer rounded-[2rem]" />
+          <div className="h-24 shimmer rounded-[2rem]" />
         </div>
       </div>
     );
@@ -137,24 +150,32 @@ export function Home() {
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-background overflow-hidden relative">
-      {/* Immersive Liturgical Background - Blur blobs */}
+      {/* Immersive Liturgical Background - Simplified for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
-          animate={{
-            x: [0, 20, 0],
-            y: [0, -20, 0],
-          }}
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  x: [0, 20, 0],
+                  y: [0, -20, 0],
+                }
+          }
           transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-[120px] opacity-[0.08] dark:opacity-[0.12]"
+          className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-[80px] opacity-[0.06] dark:opacity-[0.1] will-change-transform"
           style={{ background: liturgicalSeason.gradient[0] }}
         />
         <motion.div
-          animate={{
-            x: [0, -30, 0],
-            y: [0, 30, 0],
-          }}
+          animate={
+            shouldReduceMotion
+              ? {}
+              : {
+                  x: [0, -30, 0],
+                  y: [0, 30, 0],
+                }
+          }
           transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full blur-[100px] opacity-[0.05] dark:opacity-[0.1]"
+          className="absolute top-1/2 -right-24 w-80 h-80 rounded-full blur-[70px] opacity-[0.04] dark:opacity-[0.08] will-change-transform"
           style={{ background: liturgicalSeason.gradient[1] || liturgicalSeason.gradient[0] }}
         />
       </div>
@@ -162,7 +183,6 @@ export function Home() {
       {/* Main Content with Pull-to-Refresh */}
       <div
         ref={scrollContainerRef}
-        onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
         className="flex-1 overflow-y-auto relative z-10"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -191,11 +211,12 @@ export function Home() {
         )}
 
         <div className="px-5 pt-14 pb-32 space-y-6 relative">
-          {/* Liturgical Glow Effect - Background shadow */}
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-64 opacity-20 dark:opacity-30 blur-[100px] pointer-events-none z-0 transition-colors duration-1000"
+          {/* Liturgical Glow Effect - Dynamic via transform */}
+          <motion.div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-64 blur-[100px] pointer-events-none z-0 transition-colors duration-1000"
             style={{
               background: `radial-gradient(circle, ${liturgicalSeason.gradient[0]}, transparent 70%)`,
+              opacity: glowOpacity,
             }}
           />
 
@@ -204,14 +225,14 @@ export function Home() {
               ═══════════════════════════════════════════════════════════════ */}
           <motion.header
             style={{
-              opacity: Math.max(0, 1 - scrollY / 150),
-              scale: Math.max(0.9, 1 - scrollY / 500),
-              y: scrollY * 0.2,
+              opacity: headerOpacity,
+              scale: headerScale,
+              y: headerY,
             }}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="flex items-start justify-between relative z-10"
+            className="flex items-start justify-between relative z-10 will-change-transform"
           >
             <div className="pt-4">
               {/* Greeting */}
