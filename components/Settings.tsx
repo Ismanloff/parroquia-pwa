@@ -14,7 +14,10 @@ import {
   ChevronRight,
   RefreshCw,
   Download,
+  Share2,
 } from 'lucide-react';
+import { useMemo } from 'react';
+import { getLiturgicalSeason } from '@/lib/liturgicalColors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { InstallButton } from '@/components/install';
@@ -29,6 +32,7 @@ import { cn } from '@/lib/utils';
 export function Settings() {
   const { themeMode, setThemeMode } = useTheme();
   const { user, signOut, isSupabaseConfigured } = useAuth();
+  const liturgicalSeason = useMemo(() => getLiturgicalSeason(new Date()), []);
   const { isInstalled } = useInstallPrompt();
   const { updateAvailable, updateServiceWorker, checkForUpdates } = useServiceWorker();
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -107,6 +111,27 @@ export function Settings() {
     updateServiceWorker();
   };
 
+  const handleShare = async () => {
+    haptics.light();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Parroquia - Asistente Digital',
+          text: 'Te comparto esta app de la parroquia con el evangelio, santo del día y eventos.',
+          url: window.location.origin,
+        });
+        haptics.success();
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      // Fallback
+      navigator.clipboard.writeText(window.location.origin);
+      toast.success('Enlace copiado al portapapeles');
+      haptics.success();
+    }
+  };
+
   const themeOptions = [
     { id: 'light', label: 'Claro', icon: Sun },
     { id: 'dark', label: 'Oscuro', icon: Moon },
@@ -115,17 +140,18 @@ export function Settings() {
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
-      {/* Premium Header */}
-      <div
-        className="px-6 pt-12 pb-5 sticky top-0 z-10"
-        style={{
-          background: 'var(--glass-background)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid var(--glass-border)',
-        }}
-      >
-        <h1 className="text-4xl font-black text-foreground tracking-tight">Ajustes</h1>
+      {/* Premium Header - Matching Home Style */}
+      <div className="px-6 pt-16 pb-8 h-36 flex flex-col justify-end relative z-10 overflow-hidden">
+        {/* Liturgical Glow Effect in Settings */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full opacity-10 dark:opacity-20 blur-[60px] pointer-events-none z-0"
+          style={{
+            background: `radial-gradient(circle at top, ${liturgicalSeason.gradient[0]}, transparent 80%)`,
+          }}
+        />
+        <h1 className="text-4xl font-black text-foreground tracking-tight relative z-10">
+          Ajustes
+        </h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-32 space-y-8">
@@ -337,6 +363,20 @@ export function Settings() {
               </div>
               <ChevronRight className="w-5 h-5 text-slate-300" />
             </a>
+
+            <button
+              onClick={handleShare}
+              className="w-full flex items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+            >
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 rounded-lg mr-4">
+                <Share2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-foreground">Compartir app</p>
+                <p className="text-xs text-slate-500">Enviar enlace a otras personas</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-300" />
+            </button>
           </Card>
         </section>
 

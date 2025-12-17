@@ -155,7 +155,7 @@ export function Home() {
             className="absolute top-0 w-full flex justify-center pointer-events-none z-20"
             style={{ paddingTop: Math.min(pullDistance / 3, 20) }}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-full p-2 shadow-lg">
+            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-full p-2.5 shadow-xl border border-white/20 dark:border-slate-700/30 ring-4 ring-black/5 dark:ring-white/5">
               <RefreshCw
                 className={`w-5 h-5 text-blue-500 transition-transform ${pullDistance > 60 ? 'rotate-180' : ''}`}
                 style={{
@@ -167,11 +167,19 @@ export function Home() {
           </div>
         )}
 
-        <div className="px-5 pt-14 pb-32 space-y-6">
+        <div className="px-5 pt-14 pb-32 space-y-6 relative">
+          {/* Liturgical Glow Effect - Background shadow */}
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-64 opacity-20 dark:opacity-30 blur-[100px] pointer-events-none z-0 transition-colors duration-1000"
+            style={{
+              background: `radial-gradient(circle, ${liturgicalSeason.gradient[0]}, transparent 70%)`,
+            }}
+          />
+
           {/* ═══════════════════════════════════════════════════════════════
               PREMIUM HEADER - Diseño más impactante
               ═══════════════════════════════════════════════════════════════ */}
-          <header className="flex items-start justify-between">
+          <header className="flex items-start justify-between relative z-10">
             <div>
               {/* Greeting */}
               <p className="text-base font-medium text-slate-400 dark:text-slate-500 mb-1">
@@ -227,6 +235,7 @@ export function Home() {
             {/* Evangelio Card - Premium Style */}
             <button
               onClick={goToEvangelio}
+              aria-label="Ver el evangelio y lecturas del día"
               className="group bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
             >
               {/* Subtle Gradient Overlay */}
@@ -252,6 +261,7 @@ export function Home() {
             {/* Santo del día Card - Premium Style */}
             <button
               onClick={goToSanto}
+              aria-label="Ver el santo del día"
               className="group bg-white dark:bg-slate-800 rounded-3xl p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative"
             >
               {/* Subtle Gradient Overlay */}

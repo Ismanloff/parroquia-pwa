@@ -6,6 +6,7 @@ import { Onboarding } from '@/components/Onboarding';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { InstallBanner } from '@/components/install/InstallBanner';
 import { NotificationPrompt } from '@/components/NotificationPrompt';
+import { DynamicMetaTags } from '@/components/pwa/DynamicMetaTags';
 import './globals.css';
 
 const geistSans = Geist({
@@ -110,6 +111,8 @@ export default function RootLayout({
           <InstallBanner delay={30} position="bottom" />
           {/* Prompt de notificaciones push */}
           <NotificationPrompt />
+          {/* Meta tags dinámicos para PWA */}
+          <DynamicMetaTags />
         </Providers>
       </body>
     </html>

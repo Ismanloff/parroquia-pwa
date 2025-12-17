@@ -1,7 +1,9 @@
 /**
  * Haptic Feedback Utility
- * Provides subtle vibration feedback for user interactions
- * Only works on mobile devices with vibration support
+ * Provides subtle vibration feedback for user interactions.
+ *
+ * NOTE: navigator.vibrate is currently NOT supported on iOS Safari (even in PWA mode).
+ * This utility fails gracefully on unsupported devices.
  */
 
 export const haptics = {
@@ -10,8 +12,12 @@ export const haptics = {
    * Use for: Tab changes, button taps, minor interactions
    */
   light: () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(10);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(10);
+      }
+    } catch (e) {
+      // Silent error for environments where vibrate might fail or be restricted
     }
   },
 
@@ -20,8 +26,12 @@ export const haptics = {
    * Use for: Important button presses, install prompts, settings changes
    */
   medium: () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(20);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(20);
+      }
+    } catch (e) {
+      // ignore
     }
   },
 
@@ -30,8 +40,12 @@ export const haptics = {
    * Use for: Successful operations, pull-to-refresh complete, form submissions
    */
   success: () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate([10, 30, 10]);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([10, 30, 10]);
+      }
+    } catch (e) {
+      // ignore
     }
   },
 
@@ -40,8 +54,12 @@ export const haptics = {
    * Use for: Errors, failed operations, validation errors
    */
   error: () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate([50, 30, 50]);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([50, 30, 50]);
+      }
+    } catch (e) {
+      // ignore
     }
   },
 
@@ -50,8 +68,12 @@ export const haptics = {
    * Use for: Major actions, destructive operations, confirmations
    */
   heavy: () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(30);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(30);
+      }
+    } catch (e) {
+      // ignore
     }
   },
 
@@ -60,8 +82,12 @@ export const haptics = {
    * Use for: Scrolling through lists, date pickers, incremental changes
    */
   selection: () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(5);
+    try {
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(5);
+      }
+    } catch (e) {
+      // ignore
     }
   },
 };
