@@ -17,6 +17,7 @@ import {
   useReducedMotion,
   useMotionValue,
   animate,
+  AnimatePresence,
 } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
@@ -220,39 +221,54 @@ export function Home() {
               scale: headerScale,
               y: headerY,
             }}
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="flex items-start justify-between relative z-20 will-change-transform"
           >
-            {loading ? (
-              <div className="pt-4 space-y-3 flex-1">
-                <div className="h-4 w-24 shimmer rounded-full" />
-                <div className="h-10 w-48 shimmer rounded-2xl" />
-                <div className="h-6 w-56 shimmer rounded-xl" />
-              </div>
-            ) : (
-              <div className="pt-4 flex-1">
-                <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">
-                  {greeting} ✨
-                </p>
-                <h1 className="text-3xl font-black text-foreground leading-tight capitalize">
-                  {weekdayStr}
-                </h1>
-                <p className="text-lg font-medium text-slate-500 dark:text-slate-400">
-                  {dateStr} de {monthStr.toLowerCase()} de {yearStr}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: liturgicalSeason.gradient[0] }}
-                  />
-                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-                    {liturgicalSeason.name}
-                  </span>
-                </div>
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {loading ? (
+                <motion.div
+                  key="header-skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="pt-4 space-y-3 flex-1"
+                >
+                  <div className="h-4 w-24 shimmer rounded-full" />
+                  <div className="h-10 w-48 shimmer rounded-2xl" />
+                  <div className="h-6 w-56 shimmer rounded-xl" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="header-content"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="pt-4 flex-1"
+                >
+                  <p className="text-sm font-bold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">
+                    {greeting} ✨
+                  </p>
+                  <h1 className="text-3xl font-black text-foreground leading-tight capitalize">
+                    {weekdayStr}
+                  </h1>
+                  <p className="text-lg font-medium text-slate-500 dark:text-slate-400">
+                    {dateStr} de {monthStr.toLowerCase()} de {yearStr}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: liturgicalSeason.gradient[0] }}
+                    />
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+                      {liturgicalSeason.name}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <button
               onClick={handleRefresh}
@@ -281,120 +297,145 @@ export function Home() {
               MAIN CARDS GRID - Bento Grid Style Premium
               ═══════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Evangelio Card */}
-            {loading ? (
-              <div className="h-44 shimmer rounded-[2rem]" />
-            ) : (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                onClick={goToEvangelio}
-                className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative min-h-[11rem]"
-                style={{ transform: 'translateZ(0)' }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-900/20 flex items-center justify-center mb-4 shadow-sm">
-                    <BookOpen
-                      className="w-7 h-7 text-amber-600 dark:text-amber-400"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                  <h2 className="text-xl font-bold text-foreground leading-tight">Evangelio</h2>
-                  <p className="text-base text-slate-500 dark:text-slate-400 mt-1">y lecturas</p>
-                  {evangelio && (
-                    <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-3 uppercase tracking-wide truncate">
-                      {evangelio.cita}
-                    </p>
-                  )}
-                </div>
-              </motion.button>
-            )}
-
-            {/* Santo del día Card */}
-            {loading ? (
-              <div className="h-44 shimmer rounded-[2rem]" />
-            ) : (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                onClick={goToSanto}
-                className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative min-h-[11rem]"
-                style={{ transform: 'translateZ(0)' }}
-              >
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{
-                    background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}10, transparent)`,
-                  }}
+            <AnimatePresence mode="popLayout">
+              {loading ? (
+                <motion.div
+                  key="ev-skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="h-44 shimmer rounded-[2rem]"
                 />
-                <div className="relative z-10">
-                  <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
-                    style={{
-                      background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}25, ${liturgicalSeason.gradient[0]}10)`,
-                    }}
-                  >
-                    <Sparkles
-                      className="w-7 h-7"
-                      style={{ color: liturgicalSeason.gradient[0] }}
-                      strokeWidth={1.5}
-                    />
+              ) : (
+                <motion.button
+                  key="ev-content"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  onClick={goToEvangelio}
+                  className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative min-h-[11rem]"
+                  style={{ transform: 'translateZ(0)' }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative z-10">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-900/20 flex items-center justify-center mb-4 shadow-sm">
+                      <BookOpen
+                        className="w-7 h-7 text-amber-600 dark:text-amber-400"
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground leading-tight">Evangelio</h2>
+                    <p className="text-base text-slate-500 dark:text-slate-400 mt-1">y lecturas</p>
+                    {evangelio && (
+                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-3 uppercase tracking-wide truncate">
+                        {evangelio.cita}
+                      </p>
+                    )}
                   </div>
-                  <h2 className="text-xl font-bold text-foreground leading-tight">Santo</h2>
-                  <p className="text-base text-slate-500 dark:text-slate-400 mt-1">del día</p>
-                  {santo && (
-                    <p
-                      className="text-sm font-semibold mt-3 line-clamp-1"
-                      style={{ color: liturgicalSeason.gradient[0] }}
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence mode="popLayout">
+              {loading ? (
+                <motion.div
+                  key="st-skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="h-44 shimmer rounded-[2rem]"
+                />
+              ) : (
+                <motion.button
+                  key="st-content"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  onClick={goToSanto}
+                  className="group bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.97] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 overflow-hidden relative min-h-[11rem]"
+                  style={{ transform: 'translateZ(0)' }}
+                >
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{
+                      background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}10, transparent)`,
+                    }}
+                  />
+                  <div className="relative z-10">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm"
+                      style={{
+                        background: `linear-gradient(135deg, ${liturgicalSeason.gradient[0]}25, ${liturgicalSeason.gradient[0]}10)`,
+                      }}
                     >
-                      {santo.nombre}
-                    </p>
-                  )}
-                </div>
-              </motion.button>
-            )}
+                      <Sparkles
+                        className="w-7 h-7"
+                        style={{ color: liturgicalSeason.gradient[0] }}
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground leading-tight">Santo</h2>
+                    <p className="text-base text-slate-500 dark:text-slate-400 mt-1">del día</p>
+                    {santo && (
+                      <p
+                        className="text-sm font-semibold mt-3 line-clamp-1"
+                        style={{ color: liturgicalSeason.gradient[0] }}
+                      >
+                        {santo.nombre}
+                      </p>
+                    )}
+                  </div>
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Upcoming Events Card */}
-          {loading ? (
-            <div className="h-24 shimmer rounded-[2rem]" />
-          ) : (
-            <motion.button
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              onClick={goToCalendar}
-              className="w-full bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 relative z-10 min-h-[6.5rem]"
-              style={{ transform: 'translateZ(0)' }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center shrink-0 shadow-sm">
-                  <CalendarIcon
-                    className="w-7 h-7 text-blue-600 dark:text-blue-400"
-                    strokeWidth={1.5}
-                  />
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <motion.div
+                key="ev-list-skeleton"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-24 shimmer rounded-[2rem]"
+              />
+            ) : (
+              <motion.button
+                key="ev-list-content"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                onClick={goToCalendar}
+                className="w-full bg-white dark:bg-slate-800 rounded-[2rem] p-5 text-left shadow-sm hover:shadow-lg active:scale-[0.98] transition-all duration-200 border border-slate-100 dark:border-slate-700/50 relative z-10 min-h-[6.5rem]"
+                style={{ transform: 'translateZ(0)' }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center shrink-0 shadow-sm">
+                    <CalendarIcon
+                      className="w-7 h-7 text-blue-600 dark:text-blue-400"
+                      strokeWidth={1.5}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold text-foreground">Próximos eventos</h2>
+                    {upcomingEvents.length > 0 && upcomingEvents[0] ? (
+                      <div className="mt-1.5">
+                        <p className="text-base text-slate-600 dark:text-slate-300 truncate font-medium">
+                          {upcomingEvents[0].title}
+                        </p>
+                        <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1">
+                          <Clock className="w-4 h-4" />
+                          {dayjs(upcomingEvents[0].start).format('dddd D, HH:mm')}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-base text-slate-400 mt-1">Sin eventos próximos</p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold text-foreground">Próximos eventos</h2>
-                  {upcomingEvents.length > 0 && upcomingEvents[0] ? (
-                    <div className="mt-1.5">
-                      <p className="text-base text-slate-600 dark:text-slate-300 truncate font-medium">
-                        {upcomingEvents[0].title}
-                      </p>
-                      <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1">
-                        <Clock className="w-4 h-4" />
-                        {dayjs(upcomingEvents[0].start).format('dddd D, HH:mm')}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-base text-slate-400 mt-1">Sin eventos próximos</p>
-                  )}
-                </div>
-                <ChevronRight className="w-6 h-6 text-slate-300 dark:text-slate-600 shrink-0" />
-              </div>
-            </motion.button>
-          )}
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>
